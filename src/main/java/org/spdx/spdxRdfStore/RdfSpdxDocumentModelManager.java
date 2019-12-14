@@ -5,9 +5,13 @@ package org.spdx.spdxRdfStore;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -28,8 +32,10 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.NodeIterator;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +43,6 @@ import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.SpdxConstants;
 import org.spdx.library.SpdxInvalidIdException;
 import org.spdx.library.model.IndividuallValue;
-import org.spdx.library.model.SpdxIdNotFoundException;
 import org.spdx.library.model.SpdxInvalidTypeException;
 import org.spdx.library.model.TypedValue;
 import org.spdx.storage.IModelStore;
@@ -46,6 +51,11 @@ import org.spdx.storage.IModelStore.ReadWrite;
 
 /**
  * Manages the reads/write/updates for a specific Jena model associated with a document
+ * 
+ * Since the ID's are not fully qualified with the URI, there is some complexity in this implementation.
+ * 
+ * It is assumed that all ID's are subjects that are either Anonymous or URI types.
+ * If a URI type, the ID namespace is either the listed license namespace or the document URI.
  * 
  * @author Gary O'Neall
  *
@@ -56,6 +66,8 @@ public class RdfSpdxDocumentModelManager {
 	
 	static final String RDF_TYPE = SpdxConstants.RDF_NAMESPACE + SpdxConstants.RDF_PROP_TYPE;
 	
+	static final Set<String> LISTED_LICENSE_CLASSES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(SpdxConstants.LISTED_LICENSE_URI_CLASSES)));
+	
 	/**
 	 * Listen for any new resources being created to make sure we update the next ID numbers
 	 *
@@ -65,6 +77,11 @@ public class RdfSpdxDocumentModelManager {
 		public void added(Object x) {
 			if (x instanceof RDFNode) {
 				updateCounters((RDFNode)x);
+			} else if (x instanceof Statement) {
+				Statement st = (Statement)x;
+				if (Objects.nonNull(st.getSubject())) {
+					updateCounters(st.getSubject());
+				}
 			}
 		}
 	}
@@ -81,6 +98,8 @@ public class RdfSpdxDocumentModelManager {
 
 	private int nextNextLicenseId = 1;
 
+	private Property typeProperty;
+
 	/**
 	 * @param documentUri Unique URI for this document
 	 * @param model Model used to store this document
@@ -90,6 +109,7 @@ public class RdfSpdxDocumentModelManager {
 		Objects.requireNonNull(model, "Missing required model");
 		this.documentUri = documentUri;
 		this.model = model;
+		typeProperty = model.createProperty(RDF_TYPE);
 		model.register(nextIdListener);
 		updateCounters();
 	}
@@ -189,10 +209,12 @@ public class RdfSpdxDocumentModelManager {
 	private void updateCounters(RDFNode node) {
 		Objects.requireNonNull(node);
 		if (node.isResource()) {
+			if (node.isAnon()) {
+				return;
+			}
 			String id = node.asResource().getLocalName();
-			Matcher anonMatcher = RdfStore.ANON_ID_PATTERN.matcher(id);
-			if (anonMatcher.matches()) {
-				return; // we get the anon ID's from the model directly, don't need to update
+			if (Objects.isNull(id)) {
+				return;
 			}
 			Matcher licenseRefMatcher = SpdxConstants.LICENSE_ID_PATTERN_NUMERIC.matcher(id);
 			if (licenseRefMatcher.matches()) {
@@ -218,7 +240,7 @@ public class RdfSpdxDocumentModelManager {
 	private void updateCounters() {
 		model.enterCriticalSection(true);
 		try {
-			NodeIterator iter = model.listObjects();
+			ResIterator iter = model.listSubjects();
 			while (iter.hasNext()) {
 				updateCounters(iter.next());
 			}
@@ -236,44 +258,58 @@ public class RdfSpdxDocumentModelManager {
 		RDFNode resource;
 		model.enterCriticalSection(true);
 		try {
-			resource = idToResource(id);
-			return model.containsResource(resource);
-		} catch (SpdxInvalidIdException e) {
-			logger.warn("Invalid SPDX ID passed to exist.  Returning false");
-			return false;
+			if (isAnonId(id)) {
+				try {
+					resource = model.createResource(idToAnonId(id));
+				} catch (SpdxInvalidIdException e) {
+					logger.error("Error getting anonomous ID",e);
+					throw new RuntimeException(e);
+				}
+			} else {
+				// first try local to the document
+				resource = ResourceFactory.createResource(idToUriInDocument(id));
+				if (!model.containsResource(resource)) {
+					// Try listed license URL
+					resource = ResourceFactory.createResource(idToListedLicenseUri(id));
+				}
+			}
+			Statement statement = model.getProperty(resource.asResource(), typeProperty);
+			return Objects.nonNull(statement) && Objects.nonNull(statement.getObject());
 		} finally {
 			model.leaveCriticalSection();
 		}
 	}
 	
-	private RDFNode idToResource(String id) throws SpdxInvalidIdException {
-		Objects.requireNonNull(model, "Missing required model");
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		IdType type = RdfStore.stGetIdType(id);
-		switch (type) {
-			case Anonomous: return model.createResource(idToAnonId(id));
-			case LicenseRef:
-			case DocumentRef:
-			case SpdxId: return ResourceFactory.createResource(idToUriInDocument(id));
-			case ListedLicense: return ResourceFactory.createResource(
-					SpdxConstants.LISTED_LICENSE_DOCUMENT_URI + id);
-			case Literal: return ResourceFactory.createPlainLiteral(idToLiteralString(id));
-			case Unkown:
-				default: {
-					logger.error("Unknown type for ID "+id);
-					throw new SpdxInvalidIdException("Unknown type for ID");
-				}
-		}
-	}
-	
 	/**
-	 * Convert an ID to a literal string
+	 * idToResource without type checking
 	 * @param id
-	 * @return literal form of the ID
-	 */
-	private String idToLiteralString(String id) {
-		return SpdxConstants.SPDX_NAMESPACE + id.toLowerCase();
+	 * @return Resource based on the ID
+	 * @throws SpdxInvalidIdException
+	*/
+	private Resource idToResource(String id) throws SpdxInvalidIdException {
+		Objects.requireNonNull(id, "Missing required ID");
+		Resource resource;
+		if (isAnonId(id)) {
+			resource = model.createResource(idToAnonId(id));
+		} else {
+			// first try local to the document
+			resource = model.createResource(idToUriInDocument(id));
+			if (!model.containsResource(resource)) {
+				// Try listed license URL
+				resource = model.createResource(idToListedLicenseUri(id));
+			}
+		}
+		Statement statement = model.getProperty(resource, typeProperty);
+		if (statement == null || !statement.getObject().isResource()) {
+			logger.error("ID "+id+" does not have a type.");
+			throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
+		}
+		Optional<String> existingType = SpdxResourceFactory.resourceToSpdxType(statement.getObject().asResource());
+		if (!existingType.isPresent()) {
+			logger.error("ID "+id+" does not have a type.");
+			throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
+		}
+		return resource;
 	}
 	
 	/**
@@ -290,10 +326,24 @@ public class RdfSpdxDocumentModelManager {
 	 * Convert an ID string for an Anonymous type into an AnonId
 	 * @param id
 	 * @return
+	 * @throws SpdxInvalidIdException 
 	 */
-	private AnonId idToAnonId(String id) {
-		String anon = RdfStore.ANON_ID_PATTERN.matcher(id).group(1);
+	private AnonId idToAnonId(String id) throws SpdxInvalidIdException {
+		Matcher matcher = RdfStore.ANON_ID_PATTERN.matcher(id);
+		if (!matcher.matches()) {
+			logger.error(id + " is not a valid Anonomous ID");
+			throw new SpdxInvalidIdException(id + " is not a valid Anonomous ID");
+		}
+		String anon = matcher.group(1);
 		return new AnonId(anon);
+	}
+	
+	/**
+	 * @param id
+	 * @return true if the ID is an anonomous ID
+	 */
+	private boolean isAnonId(String id) {
+		return RdfStore.ANON_ID_PATTERN.matcher(id).matches();
 	}
 	
 	/**
@@ -305,14 +355,6 @@ public class RdfSpdxDocumentModelManager {
 		return SpdxConstants.LISTED_LICENSE_DOCUMENT_URI + licenseId;
 	}
 
-	public void close() {
-		this.model.unregister(nextIdListener);
-	}
-	
-	@Override
-	public void finalize() {
-		close();
-	}
 
 	/**
 	 * Create a new resource with and ID and type
@@ -325,26 +367,17 @@ public class RdfSpdxDocumentModelManager {
 		Objects.requireNonNull(id, "Missing required ID");
 		Objects.requireNonNull(type, "Missing required type");
 		Resource rdfType = SpdxResourceFactory.typeToResource(type);
-		IdType idType = RdfStore.stGetIdType(id);
 		model.enterCriticalSection(false);
 		try {
-			switch (idType) {
-			case Anonomous: {
-				Resource r = model.createResource(new AnonId(id));	// Maybe we just create the resource with the ID?
-				model.add(r, RDF.type, rdfType);
-				return r;
+			if (LISTED_LICENSE_CLASSES.contains(type)) {
+				return model.createResource(idToListedLicenseUri(id), rdfType);
+			} else if (isAnonId(id)) {
+				Resource retval = model.createResource(idToAnonId(id));
+				retval.addProperty(typeProperty, rdfType);
+				return retval;
+			} else {
+				return model.createResource(idToUriInDocument(id), rdfType);
 			}
-			case LicenseRef:
-			case DocumentRef:
-			case SpdxId: return model.createResource(idToUriInDocument(id), rdfType);
-			case ListedLicense: return model.createResource(idToListedLicenseUri(id), rdfType);
-			case Literal:
-			case Unkown:
-				default: {
-					logger.error("Attempting to create a resource for an Uknown ID type: "+id);
-					throw new SpdxInvalidIdException("Invalid ID type for create: "+id);
-				}
-		}
 		} finally {
 			model.leaveCriticalSection();
 		}	
@@ -357,23 +390,21 @@ public class RdfSpdxDocumentModelManager {
 	 */
 	public List<String> getPropertyValueNames(String id) throws SpdxInvalidIdException {
 		Objects.requireNonNull(id, "Missing required ID");
-		List<String> retval = new ArrayList<String>();
+		Set<String> retval = new HashSet<String>();	// store unique values
 		model.enterCriticalSection(true);
 		try {
-			RDFNode idNode = idToResource(id);
-			if (!idNode.isResource()) {
-				return retval;
-			}
-			Resource idResource = idNode.asResource();
+			Resource idResource = idToResource(id);
 			
 			idResource.listProperties().forEachRemaining(action -> {
 				try {
-					retval.add(resourceToPropertyName(action.getObject()));
+					if (Objects.nonNull(action.getPredicate()) && !RDF_TYPE.equals(action.getPredicate().getURI())) {
+						retval.add(resourceToPropertyName(action.getPredicate()));
+					}
 				} catch (SpdxRdfException e) {
 					logger.warn("Skipping invalid property "+action.getObject().toString(),e);
 				}
 			});
-			return retval;
+			return Collections.unmodifiableList(new ArrayList<>(retval));
 		} finally {
 			model.leaveCriticalSection();
 		}
@@ -412,16 +443,8 @@ public class RdfSpdxDocumentModelManager {
 		model.enterCriticalSection(false);
 		try {
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
-			RDFNode idNode = idToResource(id);
-			if (!idNode.isResource()) {
-				logger.error("Can not store values for ID" + id + ".  This ID is not a resource.");
-				throw new SpdxRdfException("Can not store values for ID" + id + ".  This ID is not a resource.");
-			}
-			Resource idResource = idNode.asResource();
-			if (!model.containsResource(idResource)) {
-				logger.error("ID "+id+" was not found in the memory store.  The ID must first be created before getting or setting property values.");
-				throw new SpdxIdNotFoundException("ID "+id+" was not found in the memory store.  The ID must first be created before getting or setting property values.");
-			}
+			Resource idResource = idToResource(id);
+			idResource.removeAll(property);
 			idResource.addProperty(property, valueToNode(value));
 		} finally {
 			model.leaveCriticalSection();
@@ -429,7 +452,7 @@ public class RdfSpdxDocumentModelManager {
 	}
 	
 	/**
-	 * Converts a value to an RDFNode basd on the object type
+	 * Converts a to an RDFNode based on the object type
 	 * @param value
 	 * @return
 	 * @throws InvalidSPDXAnalysisException
@@ -440,16 +463,7 @@ public class RdfSpdxDocumentModelManager {
 			return model.createTypedLiteral(value);
 		} else if (value instanceof TypedValue) {
 			TypedValue tv = (TypedValue)value;
-			RDFNode valueNode = idToResource(tv.getId());
-			if (!valueNode.isResource()) {
-				logger.error("Typed value ID "+tv.getId() + " is not a resource type");
-				throw new SpdxRdfException("Typed value ID is not a resource type");
-			}
-			Resource valueResource = valueNode.asResource();
-			if (!model.containsResource(valueResource)) {
-				valueResource = create(tv.getId(), tv.getType());
-			}
-			return valueResource;
+			return create(tv.getId(), tv.getType());
 		} else if (value instanceof IndividuallValue) {
 			return model.createResource(((IndividuallValue)value).getIndividualURI());
 		} else {
@@ -470,52 +484,59 @@ public class RdfSpdxDocumentModelManager {
 		Objects.requireNonNull(propertyName, "Missing required property name");
 		model.enterCriticalSection(true);
 		try {
-			RDFNode idResource = idToResource(id);
-			if (!idResource.isResource()) {
-				logger.error("Can not get value for ID.  ID "+id+" is not a resource.");
-				throw new SpdxRdfException("Can not get value for ID.  ID "+id+" is not a resource.");
-			}
+			Resource idResource = idToResource(id);
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
-			Resource propertyValue = idResource.asResource().getPropertyResourceValue(property);
-			if (Objects.isNull(propertyValue)) {
+			NodeIterator iter = model.listObjectsOfProperty(idResource, property);
+			if (!iter.hasNext()) {
 				return Optional.empty();
 			}
-			if (propertyValue.isLiteral()) {
-				return Optional.of(propertyValue.asLiteral().getValue());
+			Optional<Object> result = valueNodeToObject(iter.next());
+			if (iter.hasNext()) {
+				logger.error("Error getting single value.  Multiple values for property "+propertyName+" ID "+id+".");
+				throw new SpdxRdfException("Error getting single value.  Multiple values for property "+propertyName+" ID "+id+".");
 			}
-			Resource valueType = propertyValue.getPropertyResourceValue(RDF.type);
-			Optional<String> sValueType;
-			if (!Objects.isNull(valueType)) {
-				sValueType = SpdxResourceFactory.resourceToSpdxType(valueType);
-			} else {
-				sValueType = Optional.empty();
-			}
-			if (sValueType.isPresent()) {
-				return Optional.of(new TypedValue(resourceToId(propertyValue), sValueType.get()));
-			} else {
-				if (propertyValue.isURIResource()) {
-					// Assume this is an individual value
-					final String propertyUri = propertyValue.getURI();
-					IndividuallValue iv = new IndividuallValue() {
-
-						@Override
-						public String getIndividualURI() {
-							return propertyUri;
-						}
-						
-					};
-					return Optional.of(iv);
-				} else {
-					logger.error("Invalid resource type for value.  Must be a typed value, literal value or a URI Resource");
-					throw new SpdxRdfException("Invalid resource type for value.  Must be a typed value, literal value or a URI Resource");
-				}
-			}
+			return result;
 		} finally {
 			model.leaveCriticalSection();
 		}
 	}
 	
-	/**
+	private Optional<Object> valueNodeToObject(RDFNode propertyValue) throws InvalidSPDXAnalysisException {
+		if (Objects.isNull(propertyValue)) {
+			return Optional.empty();
+		}
+		if (propertyValue.isLiteral()) {
+			return Optional.of(propertyValue.asLiteral().getValue());
+		}
+		Resource valueType = propertyValue.asResource().getPropertyResourceValue(RDF.type);
+		Optional<String> sValueType;
+		if (Objects.nonNull(valueType)) {
+			sValueType = SpdxResourceFactory.resourceToSpdxType(valueType);
+		} else {
+			sValueType = Optional.empty();
+		}
+		if (sValueType.isPresent()) {
+			return Optional.of(new TypedValue(resourceToId(propertyValue.asResource()), sValueType.get()));
+		} else {
+			if (propertyValue.isURIResource()) {
+				// Assume this is an individual value
+				final String propertyUri = propertyValue.asResource().getURI();
+				IndividuallValue iv = new IndividuallValue() {
+
+					@Override
+					public String getIndividualURI() {
+						return propertyUri;
+					}
+					
+				};
+				return Optional.of(iv);
+			} else {
+				logger.error("Invalid resource type for value.  Must be a typed value, literal value or a URI Resource");
+				throw new SpdxRdfException("Invalid resource type for value.  Must be a typed value, literal value or a URI Resource");
+			}
+		}
+	}
+/**
 	 * Obtain an ID from a resource
 	 * @param resource
 	 * @return ID formatted appropriately for use outside the RdfStore
@@ -545,9 +566,18 @@ public class RdfSpdxDocumentModelManager {
 		case LicenseRef: return SpdxConstants.NON_STD_LICENSE_ID_PRENUM+String.valueOf(getNextLicenseId());
 		case DocumentRef: return SpdxConstants.EXTERNAL_DOC_REF_PRENUM+String.valueOf(getNextDocumentId());
 		case SpdxId: return SpdxConstants.SPDX_ELEMENT_REF_PRENUM+String.valueOf(getNextSpdxId());
-		case ListedLicense: throw new InvalidSPDXAnalysisException("Can not generate a license ID for a Listed License");
-		case Literal: throw new InvalidSPDXAnalysisException("Can not generate a license ID for a Literal");
-		default: throw new InvalidSPDXAnalysisException("Unknown ID type for next ID: "+idType.toString());
+		case ListedLicense: {
+			logger.error("Can not generate a license ID for a Listed License");
+			throw new InvalidSPDXAnalysisException("Can not generate a license ID for a Listed License");
+		}
+		case Literal: {
+			logger.error("Can not generate a license ID for a Literal");
+			throw new InvalidSPDXAnalysisException("Can not generate a license ID for a Literal");
+		}
+		default: {
+			logger.error("Unknown ID type for next ID: "+idType.toString());
+			throw new InvalidSPDXAnalysisException("Unknown ID type for next ID: "+idType.toString());
+		}
 		}
 	}
 
@@ -562,12 +592,9 @@ public class RdfSpdxDocumentModelManager {
 		Objects.requireNonNull(propertyName, "Missing required property name");
 		model.enterCriticalSection(false);
 		try {
-			RDFNode idResource = idToResource(id);
-			if (!idResource.isResource()) {
-				throw new SpdxRdfException("Can not remove property from ID "+id+".  Not a resource.");
-			}
+			Resource idResource = idToResource(id);
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
-			model.removeAll(idResource.asResource(), property, null);
+			model.removeAll(idResource, property, null);
 		} finally {
 			model.leaveCriticalSection();
 		}
@@ -646,15 +673,11 @@ public class RdfSpdxDocumentModelManager {
 		Objects.requireNonNull(value, "Mising required value");
 		model.enterCriticalSection(false);
 		try {
-			RDFNode idResource = idToResource(id);
-			if (!idResource.isResource()) {
-				logger.error("Can not remove value from collection associated with ID "+id+".  Not a resource.");
-				throw new SpdxRdfException("Can not remove value from collection associated with ID "+id+".  Not a resource.");
-			}
+			Resource idResource = idToResource(id);
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
 			RDFNode rdfValue = valueToNode(value);
-			if (model.contains(idResource.asResource(), property, rdfValue)) {
-				model.removeAll(idResource.asResource(), property, rdfValue);
+			if (model.contains(idResource, property, rdfValue)) {
+				model.removeAll(idResource, property, rdfValue);
 				return true;
 			} else {
 				return false;
@@ -675,12 +698,9 @@ public class RdfSpdxDocumentModelManager {
 		Objects.requireNonNull(propertyName, "Missing required property name");
 		model.enterCriticalSection(true);
 		try {
-			RDFNode idResource = idToResource(id);
-			if (!idResource.isResource()) {
-				throw new SpdxRdfException("Can not obtain collection from ID "+id+".  Not a resource.");
-			}
+			Resource idResource = idToResource(id);
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
-			return model.listObjectsOfProperty(idResource.asResource(), property).toList().size();
+			return model.listObjectsOfProperty(idResource, property).toList().size();
 		} finally {
 			model.leaveCriticalSection();
 		}
@@ -699,48 +719,186 @@ public class RdfSpdxDocumentModelManager {
 		Objects.requireNonNull(value, "Missing required value");
 		model.enterCriticalSection(false);
 		try {
-			RDFNode idResource = idToResource(id);
-			if (!idResource.isResource()) {
-				logger.error("Can not check value from collection associated with ID "+id+".  Not a resource.");
-				throw new SpdxRdfException("Can not check value from collection associated with ID "+id+".  Not a resource.");
-			}
+			Resource idResource = idToResource(id);
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
 			RDFNode rdfValue = valueToNode(value);
-			return model.contains(idResource.asResource(), property, rdfValue);
+			return model.contains(idResource, property, rdfValue);
 		} finally {
 			model.leaveCriticalSection();
 		}
 	}
 
-	public void clearValueCollection(String id, String propertyName) {
-		// TODO Auto-generated method stub
-		
+	/**
+	 * Clear (remove) all values assocociated with the ID and property
+	 * @param id
+	 * @param propertyName
+	 * @throws InvalidSPDXAnalysisException
+	 */
+	public void clearValueCollection(String id, String propertyName) throws InvalidSPDXAnalysisException {
+		Objects.requireNonNull(id, "Missing required ID");
+		Objects.requireNonNull(propertyName, "Missing required property name");
+		model.enterCriticalSection(true);
+		try {
+			Resource idResource = idToResource(id);
+			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
+			model.removeAll(idResource, property, null);
+		} finally {
+			model.leaveCriticalSection();
+		}
 	}
 
-	public boolean addValueToCollection(String id, String propertyName, Object value) {
-		// TODO Auto-generated method stub
-		return false;
+	/**
+	 * Add value to the list of objects where the subject is the id and the predicate is the propertyName
+	 * @param id
+	 * @param propertyName
+	 * @param value
+	 * @return true if the collection was modified
+	 * @throws InvalidSPDXAnalysisException
+	 */
+	public boolean addValueToCollection(String id, String propertyName, Object value) throws InvalidSPDXAnalysisException {
+		Objects.requireNonNull(id, "Missing required ID");
+		Objects.requireNonNull(propertyName, "Missing required property name");
+		Objects.requireNonNull(value, "Missing required value");
+		model.enterCriticalSection(false);
+		try {
+			Resource idResource = idToResource(id);
+			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
+			RDFNode nodeValue = valueToNode(value);
+			if (model.contains(idResource, property, nodeValue)) {
+				return false;
+			} else {
+				model.add(idResource, property, nodeValue);
+				return true;
+			}
+		} finally {
+			model.leaveCriticalSection();
+		}
 	}
 
-	public List<Object> getValueList(String id, String propertyName) {
-		// TODO Auto-generated method stub
-		return null;
+	/**
+	 * @param id
+	 * @param propertyName
+	 * @return the list of values associated with id propertyName
+	 * @throws InvalidSPDXAnalysisException
+	 */
+	public List<Object> getValueList(String id, String propertyName) throws InvalidSPDXAnalysisException {
+		Objects.requireNonNull(id, "Missing required ID");
+		Objects.requireNonNull(propertyName, "Missing required property name");
+		model.enterCriticalSection(false);
+		try {
+			Resource idResource = idToResource(id);
+			List<Object> retval = new ArrayList<>();
+			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
+			model.listObjectsOfProperty(idResource, property).toList().forEach((RDFNode node) -> {
+				try {
+					Optional<Object> value = valueNodeToObject(node);
+					if (value.isPresent()) {
+						retval.add(value.get());
+					}
+				} catch (InvalidSPDXAnalysisException e) {
+					logger.warn("Exception adding value to node.  Skipping "+node.toString(), e);
+				}
+			}); 
+			return retval;
+		} finally {
+			model.leaveCriticalSection();
+		}
 	}
 
-	public boolean isCollectionMembersAssignableTo(String id, String propertyName, Class<?> clazz) {
-		// TODO Auto-generated method stub
-		return false;
+	/**
+	 * @param id
+	 * @param propertyName
+	 * @param clazz
+	 * @return true if all collection members associated with the property of id is assignable to clazz
+	 * @throws InvalidSPDXAnalysisException
+	 */
+	public boolean isCollectionMembersAssignableTo(String id, String propertyName, Class<?> clazz) throws InvalidSPDXAnalysisException {
+		// TODO Change implementation to read an RDF OWL document to determine type
+		Objects.requireNonNull(id, "Missing required ID");
+		Objects.requireNonNull(propertyName, "Missing required property name");
+		model.enterCriticalSection(false);
+		try {
+			Resource idResource = idToResource(id);
+			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
+			NodeIterator iter = model.listObjectsOfProperty(idResource, property);
+			while (iter.hasNext()) {
+				RDFNode node = iter.next();
+				Optional<Object> value = valueNodeToObject(node);
+				if (value.isPresent() && !clazz.isAssignableFrom(value.get().getClass())) {
+					return false;
+				}
+			}
+			return true;
+		} finally {
+			model.leaveCriticalSection();
+		}
 	}
 
-	public boolean isPropertyValueAssignableTo(String id, String propertyName, Class<?> clazz) {
-		// TODO Auto-generated method stub
-		return false;
+	/**
+	 * @param id
+	 * @param propertyName
+	 * @param clazz
+	 * @return true if there is a property value assignable to clazz
+	 * @throws InvalidSPDXAnalysisException
+	 */
+	public boolean isPropertyValueAssignableTo(String id, String propertyName, Class<?> clazz) throws InvalidSPDXAnalysisException {
+		Objects.requireNonNull(id, "Missing required ID");
+		Objects.requireNonNull(propertyName, "Missing required property name");
+		model.enterCriticalSection(false);
+		try {
+			Resource idResource = idToResource(id);
+			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
+			NodeIterator iter = model.listObjectsOfProperty(idResource, property);
+			if (!iter.hasNext()) {
+				return false;	// I guess you can assign anything and be compatible?
+			}
+			Optional<Object> objectValue = valueNodeToObject(iter.next());
+			if (iter.hasNext()) {
+				logger.error("Error getting single value.  Multiple values for property "+propertyName+" ID "+id+".");
+				throw new SpdxRdfException("Error getting single value.  Multiple values for property "+propertyName+" ID "+id+".");
+			}
+			if (objectValue.isPresent()) {
+				return clazz.isAssignableFrom(objectValue.get().getClass());
+			} else {
+				return false;
+			}
+		} finally {
+			model.leaveCriticalSection();
+		}
 	}
 
-	public boolean isCollectionProperty(String id, String propertyName) {
-		// TODO Auto-generated method stub
-		return false;
+	/**
+	 * @param id
+	 * @param propertyName
+	 * @return true if the property of associated with id contains more than one object
+	 * @throws InvalidSPDXAnalysisException
+	 */
+	public boolean isCollectionProperty(String id, String propertyName) throws InvalidSPDXAnalysisException {
+		// TODO Change implementation to read an RDF OWL document to determine type
+		Objects.requireNonNull(id, "Missing required ID");
+		Objects.requireNonNull(propertyName, "Missing required property name");
+		model.enterCriticalSection(false);
+		try {
+			Resource idResource = idToResource(id);
+			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
+			NodeIterator iter = model.listObjectsOfProperty(idResource, property);
+			if (!iter.hasNext()) {
+				return false;
+			}
+			iter.next();
+			return iter.hasNext();	//TODO: Bit of a kludge - only returning true if there is more than one element
+		} finally {
+			model.leaveCriticalSection();
+		}
 	}
 	
+
+	public void close() {
+		this.model.unregister(nextIdListener);
+	}
 	
+	@Override
+	public void finalize() {
+		close();
+	}
 }

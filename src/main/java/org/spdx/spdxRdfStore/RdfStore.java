@@ -59,8 +59,12 @@ public class RdfStore implements IModelStore {
 		}
 		return documentModel.exists(id);
 	}
-	
-	static IdType stGetIdType(String id) {
+
+	/* (non-Javadoc)
+	 * @see org.spdx.storage.IModelStore#getIdType(java.lang.String)
+	 */
+	@Override
+	public IdType getIdType(String id) {
 		Objects.requireNonNull(id, "Missing required ID");
 		if (ANON_ID_PATTERN.matcher(id).matches()) {
 			return IdType.Anonomous;
@@ -82,15 +86,6 @@ public class RdfStore implements IModelStore {
 		} else {
 			return IdType.Unkown;
 		}
-	}
-
-	/* (non-Javadoc)
-	 * @see org.spdx.storage.IModelStore#getIdType(java.lang.String)
-	 */
-	@Override
-	public IdType getIdType(String id) {
-		Objects.requireNonNull(id, "Missing required ID");
-		return stGetIdType(id);
 	}
 
 	/* (non-Javadoc)
