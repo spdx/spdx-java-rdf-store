@@ -67,7 +67,7 @@ public class RdfStore implements IModelStore {
 	public IdType getIdType(String id) {
 		Objects.requireNonNull(id, "Missing required ID");
 		if (ANON_ID_PATTERN.matcher(id).matches()) {
-			return IdType.Anonomous;
+			return IdType.Anonymous;
 		}
 		if (SpdxConstants.LICENSE_ID_PATTERN_NUMERIC.matcher(id).matches()) {
 			return IdType.LicenseRef;

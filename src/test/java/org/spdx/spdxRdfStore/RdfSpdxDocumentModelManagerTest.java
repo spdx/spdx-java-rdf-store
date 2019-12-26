@@ -81,9 +81,9 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertEquals("SPDXRef-34", nextId);
 		
 		// Anonomous ID's
-		nextId = store.getNextId(IdType.Anonomous);
+		nextId = store.getNextId(IdType.Anonymous);
 		assertTrue(nextId.startsWith(RdfStore.ANON_PREFIX));
-		String nextNextId = store.getNextId(IdType.Anonomous);
+		String nextNextId = store.getNextId(IdType.Anonymous);
 		assertFalse(nextId.equals(nextNextId));
 		assertTrue(nextNextId.startsWith(RdfStore.ANON_PREFIX));
 		
@@ -100,7 +100,7 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertEquals("LicenseRef-34", nextId);
 		nextId = store2.getNextId(IdType.SpdxId);
 		assertEquals("SPDXRef-34", nextId);
-		nextId = store2.getNextId(IdType.Anonomous);
+		nextId = store2.getNextId(IdType.Anonymous);
 		assertTrue(nextId.startsWith(RdfStore.ANON_PREFIX));
 		assertFalse(nextId.equals(nextNextId));
 		nextId = store2.getNextId(IdType.DocumentRef);
@@ -147,8 +147,8 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertTrue(store.exists(exId2));
 		
 		// anonomous
-		String anon1 = store.getNextId(IdType.Anonomous);
-		String anon2 = store.getNextId(IdType.Anonomous);
+		String anon1 = store.getNextId(IdType.Anonymous);
+		String anon2 = store.getNextId(IdType.Anonymous);
 		assertFalse(store.exists(anon1));
 		assertFalse(store.exists(anon2));
 		store.create(anon1, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);

@@ -42,8 +42,9 @@ import org.slf4j.LoggerFactory;
 import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.SpdxConstants;
 import org.spdx.library.SpdxInvalidIdException;
-import org.spdx.library.model.IndividuallValue;
+import org.spdx.library.model.IndividualUriValue;
 import org.spdx.library.model.SpdxInvalidTypeException;
+import org.spdx.library.model.SpdxModelFactory;
 import org.spdx.library.model.TypedValue;
 import org.spdx.storage.IModelStore;
 import org.spdx.storage.IModelStore.IdType;
@@ -464,8 +465,8 @@ public class RdfSpdxDocumentModelManager {
 		} else if (value instanceof TypedValue) {
 			TypedValue tv = (TypedValue)value;
 			return create(tv.getId(), tv.getType());
-		} else if (value instanceof IndividuallValue) {
-			return model.createResource(((IndividuallValue)value).getIndividualURI());
+		} else if (value instanceof IndividualUriValue) {
+			return model.createResource(((IndividualUriValue)value).getIndividualURI());
 		} else {
 			logger.error("Value type "+value.getClass().getName()+" not supported.");
 			throw new SpdxInvalidTypeException("Value type "+value.getClass().getName()+" not supported.");
@@ -521,7 +522,7 @@ public class RdfSpdxDocumentModelManager {
 			if (propertyValue.isURIResource()) {
 				// Assume this is an individual value
 				final String propertyUri = propertyValue.asResource().getURI();
-				IndividuallValue iv = new IndividuallValue() {
+				IndividualUriValue iv = new IndividualUriValue() {
 
 					@Override
 					public String getIndividualURI() {
@@ -562,7 +563,7 @@ public class RdfSpdxDocumentModelManager {
 	 */
 	public String getNextId(IdType idType) throws InvalidSPDXAnalysisException {
 		switch (idType) {
-		case Anonomous: return RdfStore.ANON_PREFIX+String.valueOf(model.createResource().getId());
+		case Anonymous: return RdfStore.ANON_PREFIX+String.valueOf(model.createResource().getId());
 		case LicenseRef: return SpdxConstants.NON_STD_LICENSE_ID_PRENUM+String.valueOf(getNextLicenseId());
 		case DocumentRef: return SpdxConstants.EXTERNAL_DOC_REF_PRENUM+String.valueOf(getNextDocumentId());
 		case SpdxId: return SpdxConstants.SPDX_ELEMENT_REF_PRENUM+String.valueOf(getNextSpdxId());
@@ -825,7 +826,18 @@ public class RdfSpdxDocumentModelManager {
 				RDFNode node = iter.next();
 				Optional<Object> value = valueNodeToObject(node);
 				if (value.isPresent() && !clazz.isAssignableFrom(value.get().getClass())) {
-					return false;
+					if (value.isPresent() && (value.get() instanceof TypedValue)) {
+						try {
+							if (!clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)value.get()).getType()))) {
+								return false;
+							}
+						} catch (InvalidSPDXAnalysisException e) {
+							logger.error("Error converting typed value to class",e);
+							return false;
+						} // else continue looping through other list values
+					} else {
+						return false;
+					}
 				}
 			}
 			return true;
@@ -858,7 +870,18 @@ public class RdfSpdxDocumentModelManager {
 				throw new SpdxRdfException("Error getting single value.  Multiple values for property "+propertyName+" ID "+id+".");
 			}
 			if (objectValue.isPresent()) {
-				return clazz.isAssignableFrom(objectValue.get().getClass());
+				if (clazz.isAssignableFrom(objectValue.get().getClass())) {
+					return true;
+				}
+				if (!(objectValue.get() instanceof TypedValue)) {
+					return false;
+				}
+				try {
+					return clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)objectValue.get()).getType()));
+				} catch (InvalidSPDXAnalysisException e) {
+					logger.error("Error converting typed value to class",e);
+					return false;
+				}
 			} else {
 				return false;
 			}
