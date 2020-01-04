@@ -3,7 +3,6 @@
  */
 package org.spdx.spdxRdfStore;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -169,8 +168,14 @@ public class RdfStore implements IModelStore {
 		Objects.requireNonNull(idType, "Missing required ID type");
 		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
 		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not obtain getNextId");
-			throw new SpdxRdfException("The document has not been created.  Can not obtain getNextId");
+			Model model = ModelFactory.createDefaultModel();
+			model.getGraph().getPrefixMapping().setNsPrefix("spdx", SpdxConstants.SPDX_NAMESPACE);
+			model.getGraph().getPrefixMapping().setNsPrefix("doap", SpdxConstants.DOAP_NAMESPACE);
+			modelManager = new RdfSpdxDocumentModelManager(documentUri, model);
+			RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentUri, modelManager);
+			if (!Objects.isNull(previousModel))  {
+				modelManager = previousModel;
+			}
 		}
 		return modelManager.getNextId(idType);
 	}
@@ -211,21 +216,6 @@ public class RdfStore implements IModelStore {
 			return new ArrayList<TypedValue>().stream();
 		}
 		return modelManager.getAllItems(typeFilter);
-	}
-
-	/* (non-Javadoc)
-	 * @see org.spdx.storage.IModelStore#beginTransaction(org.spdx.storage.IModelStore.ReadWrite)
-	 */
-	@Override
-	public ModelTransaction beginTransaction(String documentUri, ReadWrite readWrite) throws IOException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(readWrite, "Missing required readWrite");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not remove a property.");
-			throw new IOException("Can not create a transaction for a document which has not been created in the RDF store.");
-		}
-		return modelManager.beginTransaction(readWrite);
 	}
 
 	/* (non-Javadoc)
@@ -373,5 +363,21 @@ public class RdfStore implements IModelStore {
 			throw new SpdxRdfException("The document has not been created.  Can not check property for collection.");
 		}
 		return modelManager.isCollectionProperty(id, propertyName);
+	}
+
+	@Override
+	public void leaveCriticalSection(IModelStoreLock lock) {
+		lock.unlock();
+	}
+
+	@Override
+	public IModelStoreLock enterCriticalSection(String documentUri, boolean readLockRequested) throws InvalidSPDXAnalysisException {
+		Objects.requireNonNull(documentUri, "Missing required document URI");
+		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
+		if (Objects.isNull(modelManager)) {
+			logger.error("The document "+documentUri+" has not been created.  Can not enter critical section for a document that has not been created.");
+			throw new InvalidSPDXAnalysisException("Can not enter a critical section for a document which has not been created in the RDF store.");
+		}
+		return modelManager.enterCriticalSection(readLockRequested);
 	}
 }

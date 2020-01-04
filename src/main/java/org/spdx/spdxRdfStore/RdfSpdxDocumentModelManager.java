@@ -3,7 +3,6 @@
  */
 package org.spdx.spdxRdfStore;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,9 +45,8 @@ import org.spdx.library.model.IndividualUriValue;
 import org.spdx.library.model.SpdxInvalidTypeException;
 import org.spdx.library.model.SpdxModelFactory;
 import org.spdx.library.model.TypedValue;
-import org.spdx.storage.IModelStore;
 import org.spdx.storage.IModelStore.IdType;
-import org.spdx.storage.IModelStore.ReadWrite;
+import org.spdx.storage.IModelStore.IModelStoreLock;
 
 /**
  * Manages the reads/write/updates for a specific Jena model associated with a document
@@ -61,7 +59,7 @@ import org.spdx.storage.IModelStore.ReadWrite;
  * @author Gary O'Neall
  *
  */
-public class RdfSpdxDocumentModelManager {
+public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	
 	static final Logger logger = LoggerFactory.getLogger(RdfSpdxDocumentModelManager.class.getName());
 	
@@ -460,7 +458,7 @@ public class RdfSpdxDocumentModelManager {
 	 */
 	private RDFNode valueToNode(Object value) throws InvalidSPDXAnalysisException {
 		Objects.requireNonNull(value, "Missing required value");
-		if (value instanceof Boolean || value instanceof String) {
+		if (value instanceof Boolean || value instanceof String || value instanceof Integer) {
 			return model.createTypedLiteral(value);
 		} else if (value instanceof TypedValue) {
 			TypedValue tv = (TypedValue)value;
@@ -637,27 +635,6 @@ public class RdfSpdxDocumentModelManager {
 				throw new RuntimeException(e);
 			}
 		});
-	}
-
-	public IModelStore.ModelTransaction beginTransaction(IModelStore.ReadWrite readWrite) {
-		return new IModelStore.ModelTransaction() {
-
-			@Override
-			public void begin(ReadWrite readWrite) throws IOException {
-				model.begin();
-			}
-
-			@Override
-			public void commit() throws IOException {
-				model.commit();
-			}
-
-			@Override
-			public void close() throws IOException {
-				// Nothing to do here
-			}
-			
-		};
 	}
 
 	/**
@@ -923,5 +900,15 @@ public class RdfSpdxDocumentModelManager {
 	@Override
 	public void finalize() {
 		close();
+	}
+
+	public IModelStoreLock enterCriticalSection(boolean readLockRequested) {
+		this.model.enterCriticalSection(readLockRequested);
+		return this;
+	}
+
+	@Override
+	public void unlock() {
+		this.model.leaveCriticalSection();
 	}
 }
