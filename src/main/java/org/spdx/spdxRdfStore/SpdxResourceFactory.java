@@ -61,6 +61,21 @@ public class SpdxResourceFactory {
 	}
 	
 	/**
+	 * @param className
+	 * @return URI for the type or className
+	 */
+	public static String classNameToUri(String className) {
+		Objects.requireNonNull(className);
+		if (DOAP_TYPES.contains(className)) {
+			return SpdxConstants.DOAP_NAMESPACE + className;
+		} else if (POINTER_TYPES.contains(className)) {
+			return SpdxConstants.RDF_POINTER_NAMESPACE + className;
+		} else {
+			return SpdxConstants.SPDX_NAMESPACE + className; 
+		}
+	}
+	
+	/**
 	 * Create a Resource based on a standard SPDX property name
 	 * @param propertyName name of the property
 	 * @return Resource representing the property

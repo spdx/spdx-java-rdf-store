@@ -17,13 +17,18 @@
  */
 package org.spdx.library.model;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.spdx.library.DefaultModelStore;
 import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.ModelCopyManager;
+import org.spdx.library.model.enumerations.ChecksumAlgorithm;
+import org.spdx.library.model.license.AnyLicenseInfo;
+import org.spdx.library.model.license.SpdxNoneLicense;
 import org.spdx.library.model.pointer.ByteOffsetPointer;
 import org.spdx.spdxRdfStore.RdfStore;
+import org.spdx.storage.IModelStore;
 
 import junit.framework.TestCase;
 
@@ -46,10 +51,12 @@ public class ByteOffsetPointerTest extends TestCase {
 		super.setUp();
 		DefaultModelStore.reset(new RdfStore(), "http://test.document.uri/1", new ModelCopyManager());
 		gmo = new GenericModelObject();
-		REFERENCED1 = new GenericSpdxElement();
-		REFERENCED1.setName("referenced1");
-		REFERENCED2 = new GenericSpdxElement();
-		REFERENCED2.setName("referenced2");
+		REFERENCED1 = gmo.createSpdxFile(gmo.getModelStore().getNextId(IModelStore.IdType.SpdxId, gmo.getDocumentUri()), 
+				"referenced1", new SpdxNoneLicense(), Arrays.asList(new AnyLicenseInfo[] {new SpdxNoneLicense()}),
+				"copyright", gmo.createChecksum(ChecksumAlgorithm.SHA1, "cf23df2207d99a74fbe169e3eba035e633b65d94")).build();
+		REFERENCED2 = gmo.createSpdxFile(gmo.getModelStore().getNextId(IModelStore.IdType.SpdxId, gmo.getDocumentUri()), 
+				"referenced2", new SpdxNoneLicense(), Arrays.asList(new AnyLicenseInfo[] {new SpdxNoneLicense()}),
+				"copyright", gmo.createChecksum(ChecksumAlgorithm.SHA1, "ffffdf2207d99a74fbe169e3eba035e633b65d94")).build();
 	}
 
 	/* (non-Javadoc)

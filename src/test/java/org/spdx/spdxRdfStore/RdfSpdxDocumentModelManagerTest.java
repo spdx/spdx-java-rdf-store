@@ -536,11 +536,11 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	public void testIsCollectionProperty() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
 		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.create(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
+		store.create(TEST_ID1, SpdxConstants.CLASS_SPDX_CREATION_INFO);
 		// String
-		String sProperty = "stringprop";
+		String sProperty = SpdxConstants.PROP_CREATION_CREATED;
 		store.setValue(TEST_ID1, sProperty, "String 1");
-		String listProperty = "listProp";
+		String listProperty = SpdxConstants.PROP_CREATION_CREATOR;
 		store.addValueToCollection(TEST_ID1, listProperty, "testValue");
 		store.addValueToCollection(TEST_ID1, listProperty, "testValue2");
 		assertTrue(store.isCollectionProperty(TEST_ID1, listProperty));

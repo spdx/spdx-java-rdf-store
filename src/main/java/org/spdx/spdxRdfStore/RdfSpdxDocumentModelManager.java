@@ -45,6 +45,7 @@ import org.spdx.library.model.IndividualUriValue;
 import org.spdx.library.model.SpdxInvalidTypeException;
 import org.spdx.library.model.SpdxModelFactory;
 import org.spdx.library.model.TypedValue;
+import org.spdx.library.model.enumerations.SpdxEnumFactory;
 import org.spdx.storage.IModelStore.IdType;
 import org.spdx.storage.IModelStore.IModelStoreLock;
 
@@ -544,7 +545,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	private String resourceToId(Resource resource) throws SpdxRdfException {
 		Objects.requireNonNull(resource, "Mising required resource");
 		if (resource.isAnon()) {
-			return RdfStore.ANON_PREFIX + resource.getLocalName();
+			return RdfStore.ANON_PREFIX + resource.getId();
 		} else if (resource.isURIResource()) {
 			return resource.getLocalName();
 		} else {
@@ -803,7 +804,10 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				RDFNode node = iter.next();
 				Optional<Object> value = valueNodeToObject(node);
 				if (value.isPresent() && !clazz.isAssignableFrom(value.get().getClass())) {
-					if (value.isPresent() && (value.get() instanceof TypedValue)) {
+					if (!value.isPresent()) {
+						return false;
+					}
+					if (value.get() instanceof TypedValue) {
 						try {
 							if (!clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)value.get()).getType()))) {
 								return false;
@@ -812,6 +816,17 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 							logger.error("Error converting typed value to class",e);
 							return false;
 						} // else continue looping through other list values
+					} else if (value.get() instanceof IndividualUriValue) {
+						String uri = ((IndividualUriValue)value.get()).getIndividualURI();
+						Enum<?> spdxEnum = SpdxEnumFactory.uriToEnum.get(uri);
+						if (Objects.nonNull(spdxEnum)) {
+							if (!clazz.isAssignableFrom(spdxEnum.getClass())) {
+								return false;
+							}
+						} else if (!(SpdxConstants.URI_VALUE_NOASSERTION.equals(uri) ||
+								SpdxConstants.URI_VALUE_NONE.equals(uri))) {
+							return false;
+						}
 					} else {
 						return false;
 					}
@@ -850,18 +865,31 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				if (clazz.isAssignableFrom(objectValue.get().getClass())) {
 					return true;
 				}
-				if (!(objectValue.get() instanceof TypedValue)) {
-					return false;
+				if (objectValue.get() instanceof TypedValue) {
+					try {
+						return clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)objectValue.get()).getType()));
+					} catch (InvalidSPDXAnalysisException e) {
+						logger.error("Error converting typed value to class",e);
+						return false;
+					}
 				}
-				try {
-					return clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)objectValue.get()).getType()));
-				} catch (InvalidSPDXAnalysisException e) {
-					logger.error("Error converting typed value to class",e);
-					return false;
-				}
-			} else {
-				return false;
 			}
+			if (objectValue.get() instanceof IndividualUriValue) {
+				String uri = ((IndividualUriValue)objectValue.get()).getIndividualURI();
+				if (SpdxConstants.URI_VALUE_NOASSERTION.equals(uri)) {
+					return true;
+				}
+				if (SpdxConstants.URI_VALUE_NONE.equals(uri)) {
+					return true;
+				}
+				Enum<?> spdxEnum = SpdxEnumFactory.uriToEnum.get(uri);
+				if (Objects.nonNull(spdxEnum)) {
+					return clazz.isAssignableFrom(spdxEnum.getClass());
+				} else {
+					return false;
+				}
+			}
+			return false;
 		} finally {
 			model.leaveCriticalSection();
 		}
@@ -881,17 +909,22 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		try {
 			Resource idResource = idToResource(id);
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
-			NodeIterator iter = model.listObjectsOfProperty(idResource, property);
-			if (!iter.hasNext()) {
-				return false;
-			}
-			iter.next();
-			return iter.hasNext();	//TODO: Bit of a kludge - only returning true if there is more than one element
+			Resource idClass = idToClass(idResource);
+			return SpdxOwlOntology.getSpdxOwlOntology().isList(idClass.getURI(), property.getURI());
 		} finally {
 			model.leaveCriticalSection();
 		}
 	}
 	
+
+	private Resource idToClass(Resource idResource) throws SpdxInvalidIdException {
+		Statement statement = model.getProperty(idResource, typeProperty);
+		if (statement == null || !statement.getObject().isResource()) {
+			logger.error("ID "+idResource+" does not have a type.");
+			throw new SpdxInvalidIdException("ID "+idResource+" does not have a type.");
+		}
+		return statement.getObject().asResource();
+	}
 
 	public void close() {
 		this.model.unregister(nextIdListener);
