@@ -45,6 +45,8 @@ public class SpdxOwlOntology {
 	Property PROP_QUAL_CARDINALITY;
 	Property ON_PROPERTY_PROPERTY;
 	Property RANGE_PROPERTY;
+	Property ON_CLASS_PROPERTY;
+	Property ON_DATA_RANGE_PROPERTY;
 
 	
 	public static synchronized SpdxOwlOntology getSpdxOwlOntology() {
@@ -72,6 +74,8 @@ public class SpdxOwlOntology {
 			ON_PROPERTY_PROPERTY = model.createProperty("http://www.w3.org/2002/07/owl#onProperty");
 			RANGE_PROPERTY = model.getProperty("http://www.w3.org/2000/01/rdf-schema#range");
 			PROP_QUAL_CARDINALITY = model.getProperty("http://www.w3.org/2002/07/owl#qualifiedCardinality");
+			ON_CLASS_PROPERTY = model.getProperty("http://www.w3.org/2002/07/owl#onClass");
+			ON_DATA_RANGE_PROPERTY = model.getProperty("http://www.w3.org/2002/07/owl#onDataRange");
 		} catch (IOException e) {
 			throw new RuntimeException("I/O error in the SPDX OWL ontology file",e);
 		}
@@ -79,6 +83,74 @@ public class SpdxOwlOntology {
 	
 	public OntModel getModel() {
 		return this.model;
+	}
+	
+	/**
+	 * @param classUri URI for the class
+	 * @param propertyUri URI for the property
+	 * @return any class restrictions for the values of the property in the class
+	 * @throws SpdxRdfException
+	 */
+	public List<String> getClassUriRestrictions(String classUri, String propertyUri) throws SpdxRdfException {
+		Objects.requireNonNull(classUri, "Missing class URI");
+		Objects.requireNonNull(propertyUri, "Missing property URI");
+		OntClass ontClass = model.getOntClass(classUri);
+		if (Objects.isNull(ontClass)) {
+			if (classUri.endsWith("GenericSpdxElement")) {
+				ontClass = model.getOntClass(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_ELEMENT);
+			} else {
+				logger.error(classUri + " is not an SPDX class");
+				throw new SpdxRdfException(classUri + " is not an SPDX class");
+			}
+		}
+		OntProperty property = model.getOntProperty(propertyUri);
+		if (Objects.isNull(property)) {
+			logger.error(propertyUri + " is not an SPDX property");
+			throw new MissingDataTypeAndClassRestriction(propertyUri + " is not an SPDX property");
+		}
+		List<Statement> propertyRestrictions = new ArrayList<Statement>();
+		addPropertyRestrictions(ontClass, property, propertyRestrictions);
+		List<String> retval = new ArrayList<String>();
+		for (Statement stmt:propertyRestrictions) {
+			if (stmt.getPredicate().equals(ON_CLASS_PROPERTY)) {
+				retval.add(stmt.getObject().asResource().getURI());
+			}
+		}
+		return retval;
+	}
+	
+	/**
+	 * @param classUri URI for the class
+	 * @param propertyUri URI for the property
+	 * @return any data restrictions for the values of the property in the class
+	 * @throws SpdxRdfException
+	 */
+	public List<String> getDataUriRestrictions(String classUri, String propertyUri) throws SpdxRdfException {
+		Objects.requireNonNull(classUri, "Missing class URI");
+		Objects.requireNonNull(propertyUri, "Missing property URI");
+		OntClass ontClass = model.getOntClass(classUri);
+		if (Objects.isNull(ontClass)) {
+			if (classUri.endsWith("GenericSpdxElement")) {
+				ontClass = model.getOntClass(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_ELEMENT);
+			} else {
+				logger.error(classUri + " is not an SPDX class");
+				throw new SpdxRdfException(classUri + " is not an SPDX class");
+			}
+		}
+		OntProperty property = model.getOntProperty(propertyUri);
+		if (Objects.isNull(property)) {
+			logger.error(propertyUri + " is not an SPDX property");
+			throw new SpdxRdfException(propertyUri + " is not an SPDX property");
+		}
+		List<Statement> propertyRestrictions = new ArrayList<Statement>();
+		addPropertyRestrictions(ontClass, property, propertyRestrictions);
+		List<String> retval = new ArrayList<String>();
+		for (Statement stmt:propertyRestrictions) {
+			if (stmt.getPredicate().equals(ON_DATA_RANGE_PROPERTY)) {
+				retval.add(stmt.getObject().asResource().getURI());
+			}
+		}
+		return retval;
 	}
 
 	/**

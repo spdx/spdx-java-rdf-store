@@ -36,7 +36,7 @@ public class ModelCollectionTest extends TestCase {
 	}
 
 	public void testIsEmpty() throws InvalidSPDXAnalysisException {
-		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), String.class);
+		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), null);
 		assertTrue(mc.isEmpty());
 		for (String element:ELEMENTS) {
 			mc.add(element);
@@ -45,7 +45,7 @@ public class ModelCollectionTest extends TestCase {
 	}
 
 	public void testContains() throws InvalidSPDXAnalysisException {
-		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), String.class);
+		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), null);
 		for (String element:ELEMENTS) {
 			mc.add(element);
 		}
@@ -56,7 +56,7 @@ public class ModelCollectionTest extends TestCase {
 	}
 
 	public void testToImmutableList() throws InvalidSPDXAnalysisException {
-		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), String.class);
+		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), null);
 		for (String element:ELEMENTS) {
 			mc.add(element);
 		}
@@ -68,7 +68,7 @@ public class ModelCollectionTest extends TestCase {
 	}
 
 	public void testAdd() throws InvalidSPDXAnalysisException {
-		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), String.class);
+		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), null);
 		assertEquals(0, mc.size());
 		mc.add(ELEMENTS[0]);
 		assertEquals(1, mc.size());
@@ -80,7 +80,7 @@ public class ModelCollectionTest extends TestCase {
 	}
 
 	public void testRemove() throws InvalidSPDXAnalysisException {
-		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), String.class);
+		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), null);
 		for (String element:ELEMENTS) {
 			mc.add(element);
 		}
@@ -92,7 +92,7 @@ public class ModelCollectionTest extends TestCase {
 	}
 
 	public void testContainsAll() throws InvalidSPDXAnalysisException {
-		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), String.class);
+		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), null);
 		for (String element:ELEMENTS) {
 			mc.add(element);
 		}
@@ -103,7 +103,7 @@ public class ModelCollectionTest extends TestCase {
 	}
 
 	public void testAddAll() throws InvalidSPDXAnalysisException {
-		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), String.class);
+		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), null);
 		List<String> compare = new ArrayList<String>(Arrays.asList(ELEMENTS));
 		mc.addAll(compare);
 		
@@ -114,7 +114,7 @@ public class ModelCollectionTest extends TestCase {
 	}
 
 	public void testRemoveAll() throws InvalidSPDXAnalysisException {
-		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), String.class);
+		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), null);
 		List<String> list1 = Arrays.asList(ELEMENTS);
 		List<String> list2 = new ArrayList<String>(list1);
 		String addedElement = "added";
@@ -126,7 +126,7 @@ public class ModelCollectionTest extends TestCase {
 	}
 
 	public void testRetainAll() throws InvalidSPDXAnalysisException {
-		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), String.class);
+		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), null);
 		List<String> list1 = Arrays.asList(ELEMENTS);
 		List<String> list2 = new ArrayList<String>(list1);
 		String addedElement = "added";
@@ -141,7 +141,7 @@ public class ModelCollectionTest extends TestCase {
 	}
 
 	public void testClear() throws InvalidSPDXAnalysisException {
-		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), String.class);
+		ModelCollection<String> mc = new ModelCollection<String>(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getId(), PROPERTY_NAME, gmo.getCopyManager(), null);
 		for (String element:ELEMENTS) {
 			mc.add(element);
 		}

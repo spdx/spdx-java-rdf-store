@@ -3,6 +3,7 @@
  */
 package org.spdx.spdxRdfStore;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.apache.jena.ontology.OntModel;
@@ -56,5 +57,21 @@ public class SpdxOwlOntologyTest extends TestCase {
 						SpdxResourceFactory.classNameToUri(className)));
 			}
 		}
+	}
+	
+	public void testGetClassUriRestrictions() throws SpdxRdfException {
+		List<String> result = SpdxOwlOntology.getSpdxOwlOntology().getClassUriRestrictions(
+				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_PACKAGE,
+				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_ANNOTATION);
+		assertEquals(1, result.size());
+		assertEquals(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_ANNOTATION, result.get(0));
+	}
+	
+	public void testGetDataUriRestrictions() throws SpdxRdfException {
+		List<String> result = SpdxOwlOntology.getSpdxOwlOntology().getDataUriRestrictions(
+				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_PACKAGE,
+				SpdxConstants.RDFS_NAMESPACE + SpdxConstants.RDFS_PROP_COMMENT);
+		assertEquals(1, result.size());
+		assertEquals("http://www.w3.org/2001/XMLSchema#string", result.get(0));
 	}
 }

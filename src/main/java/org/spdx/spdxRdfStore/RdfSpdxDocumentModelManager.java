@@ -3,6 +3,7 @@
  */
 package org.spdx.spdxRdfStore;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,6 +22,8 @@ import java.util.stream.StreamSupport;
 
 import javax.annotation.Nullable;
 
+import org.apache.jena.datatypes.RDFDatatype;
+import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QuerySolution;
@@ -783,6 +786,70 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			model.leaveCriticalSection();
 		}
 	}
+	
+	/**
+	 * @param id
+	 * @param propertyName
+	 * @param clazz
+	 * @return true if the OWL Ontology restrictions specifies that the class for the ID and property name allows it to be assigned to clazz
+	 * @throws InvalidSPDXAnalysisException
+	 */
+	private boolean isAssignableTo(String id, String propertyName, Class<?> clazz) throws InvalidSPDXAnalysisException {
+		Objects.requireNonNull(id, "Missing required ID");
+		Objects.requireNonNull(propertyName, "Missing required property name");
+		Objects.requireNonNull(clazz, "Missing required class parameter");
+		model.enterCriticalSection(false);
+		try {
+			Resource idResource = idToResource(id);
+			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
+			Resource idClass = idToClass(idResource);
+			List<String> classUriRestrictions = SpdxOwlOntology.getSpdxOwlOntology().getClassUriRestrictions(
+					idClass.getURI(), property.getURI());
+			if (!classUriRestrictions.isEmpty()) {
+				for (String classUriRestriction:classUriRestrictions) {
+					if (!clazz.isAssignableFrom(SpdxModelFactory.classUriToClass(classUriRestriction))) {
+						return false;
+					}
+				}
+			}
+			List<String> dataUriRestrictions = SpdxOwlOntology.getSpdxOwlOntology().getDataUriRestrictions(
+					idClass.getURI(), property.getURI());
+			if (!dataUriRestrictions.isEmpty()) {
+				for (String dataUriRestriction:dataUriRestrictions) {
+					Class<?> javaClass = dataUriToClass(dataUriRestriction);
+					if (Objects.isNull(javaClass) || !clazz.isAssignableFrom(dataUriToClass(dataUriRestriction))) {
+						if (URI.class.equals(javaClass)) {
+							return clazz.isAssignableFrom(String.class);	//TODO: support the URI class
+						} else {
+							return false;
+						}
+					}
+				}
+			}
+			if (dataUriRestrictions.isEmpty() && classUriRestrictions.isEmpty()) {
+				throw new MissingDataTypeAndClassRestriction("Missing datatype and class restrictions for class " +
+							idClass.getURI()+ " and property " + property.getURI());
+			} else {
+				return true;
+			}
+		} finally {
+			model.leaveCriticalSection();
+		}
+	}
+
+	/**
+	 * @param dataUri
+	 * @return the class associated with the data URI
+	 */
+	private Class<?> dataUriToClass(String dataUri) throws SpdxRdfException {
+		Objects.requireNonNull(dataUri, "Missing required data URI restriction");
+		int poundIndex = dataUri.lastIndexOf('#');
+		if (poundIndex < 1) {
+			throw new SpdxRdfException("Invalid data URI "+dataUri);
+		}
+		RDFDatatype dataType = TypeMapper.getInstance().getTypeByName(dataUri);
+		return dataType.getJavaClass();
+	}
 
 	/**
 	 * @param id
@@ -792,9 +859,15 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 * @throws InvalidSPDXAnalysisException
 	 */
 	public boolean isCollectionMembersAssignableTo(String id, String propertyName, Class<?> clazz) throws InvalidSPDXAnalysisException {
-		// TODO Change implementation to read an RDF OWL document to determine type
 		Objects.requireNonNull(id, "Missing required ID");
 		Objects.requireNonNull(propertyName, "Missing required property name");
+		Objects.requireNonNull(clazz, "Missing required class parameter");
+		try {
+			return isAssignableTo(id, propertyName, clazz);
+		} catch (MissingDataTypeAndClassRestriction ex) {
+			logger.warn("Error determining assingability by OWL ontology.  Checking actual properties.",ex);
+		}
+		// NOTE: we only get here if there is an error taking the ontology approach
 		model.enterCriticalSection(false);
 		try {
 			Resource idResource = idToResource(id);
@@ -848,6 +921,12 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	public boolean isPropertyValueAssignableTo(String id, String propertyName, Class<?> clazz) throws InvalidSPDXAnalysisException {
 		Objects.requireNonNull(id, "Missing required ID");
 		Objects.requireNonNull(propertyName, "Missing required property name");
+		try {
+			return isAssignableTo(id, propertyName, clazz);
+		} catch (MissingDataTypeAndClassRestriction ex) {
+			logger.warn("Error determining assingability by OWL ontology.  Checking actual properties.",ex);
+		}
+		// NOTE: we only get here if the OWL schema approach didn't work
 		model.enterCriticalSection(false);
 		try {
 			Resource idResource = idToResource(id);

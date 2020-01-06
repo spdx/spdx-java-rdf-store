@@ -1390,7 +1390,7 @@ Known issues:
             <owl:Restriction>
                 <owl:onProperty rdf:resource="http://spdx.org/rdf/terms#licenseInfoInFile"/>
                 <owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minQualifiedCardinality>
-                <owl:onClass rdf:resource="http://spdx.org/rdf/terms#File"/>
+                <owl:onClass rdf:resource="http://spdx.org/rdf/terms#AnyLicenseInfo"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
@@ -1846,14 +1846,14 @@ Known issues:
             <owl:Restriction>
                 <owl:onProperty rdf:resource="http://spdx.org/rdf/terms#licenseInfoInSnippet"/>
                 <owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minQualifiedCardinality>
-                <owl:onClass rdf:resource="http://www.w3.org/2009/pointers#SinglePointer"/>
+                <owl:onClass rdf:resource="http://spdx.org/rdf/terms#AnyLicenseInfo"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="http://spdx.org/rdf/terms#range"/>
                 <owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minQualifiedCardinality>
-                <owl:onClass rdf:resource="http://www.w3.org/2009/pointers#CompoundPointer"/>
+                <owl:onClass rdf:resource="http://www.w3.org/2009/pointers#StartEndPointer"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
