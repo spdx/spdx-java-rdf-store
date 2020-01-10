@@ -3,6 +3,11 @@
  */
 package org.spdx.spdxRdfStore;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,8 +21,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import org.apache.jena.graph.Node;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.util.FileManager;
+import org.apache.jena.util.iterator.ExtendedIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spdx.library.InvalidSPDXAnalysisException;
@@ -379,5 +388,102 @@ public class RdfStore implements IModelStore {
 			throw new InvalidSPDXAnalysisException("Can not enter a critical section for a document which has not been created in the RDF store.");
 		}
 		return modelManager.enterCriticalSection(readLockRequested);
+	}
+	
+	/**
+	 * Load a document from a file or URL
+	 * @param fileNameOrUrl
+	 * @param overwrite if true, overwrite any existing documents with the same document URI
+	 * @return the DocumentURI of the SPDX document
+	 * @throws InvalidSPDXAnalysisException
+	 */
+	public String loadModelFromFile(String fileNameOrUrl, boolean overwrite) throws InvalidSPDXAnalysisException {
+		InputStream spdxRdfInput = FileManager.get().open(fileNameOrUrl);
+		if (Objects.isNull(spdxRdfInput)) {
+			throw new SpdxRdfException("File not found: "+fileNameOrUrl);
+		}
+		try {
+			Model model = ModelFactory.createDefaultModel();
+			model.read(spdxRdfInput, figureBaseUri(fileNameOrUrl));
+			Node documentNode = getSpdxDocNode(model);
+			if (documentNode == null) {
+				throw(new InvalidSPDXAnalysisException("Invalid model - must contain an SPDX Document"));
+			}
+			if (!documentNode.isURI()) {
+				throw(new InvalidSPDXAnalysisException("SPDX Documents must have a unique URI"));
+			}
+			String docUri = documentNode.getURI();
+			String documentNamespace = this.formDocNamespace(docUri);
+			RdfSpdxDocumentModelManager modelManager = new RdfSpdxDocumentModelManager(documentNamespace, model);
+			RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentNamespace, modelManager);
+			
+			if (!Objects.isNull(previousModel))  {
+				if (overwrite) {
+					logger.warn("Overwriting previous model from file for document URI "+documentNamespace);
+					documentUriModelMap.put(documentNamespace, modelManager);
+				} else {
+					throw new SpdxRdfException("Document "+documentNamespace+" is already open in the RDF Store");
+				}
+			}
+			return documentNamespace;
+		} finally {
+			try {
+				spdxRdfInput.close();
+			} catch (IOException e) {
+				logger.warn("Error closing SPDX RDF file "+fileNameOrUrl,e);
+			}
+		}
+	}
+	
+	/**
+	 * Form the document namespace URI from the SPDX document URI
+	 * @param docUriString String form of the SPDX document URI
+	 * @return
+	 */
+	private String formDocNamespace(String docUriString) {
+		// just remove any fragments for the DOC URI
+		int fragmentIndex = docUriString.indexOf('#');
+		if (fragmentIndex <= 0) {
+			return docUriString;
+		} else {
+			return docUriString.substring(0, fragmentIndex);
+		}
+	}
+	/**
+	 * @return the spdx doc node from the model
+	 */
+	private Node getSpdxDocNode(Model model) {
+		Node spdxDocNode = null;
+		Node rdfTypePredicate = model.getProperty(SpdxConstants.RDF_NAMESPACE, SpdxConstants.RDF_PROP_TYPE).asNode();
+		Node spdxDocObject = model.getProperty(SpdxConstants.SPDX_NAMESPACE, SpdxConstants.CLASS_SPDX_DOCUMENT).asNode();
+		Triple m = Triple.createMatch(null, rdfTypePredicate, spdxDocObject);
+		ExtendedIterator<Triple> tripleIter = model.getGraph().find(m);	// find the document
+		while (tripleIter.hasNext()) {
+			Triple docTriple = tripleIter.next();
+			spdxDocNode = docTriple.getSubject();
+		}
+		return spdxDocNode;
+	}
+	
+	private static String figureBaseUri(String src) {
+		
+		URI s = null;
+		try{
+			s = new URI(src);
+		} catch(URISyntaxException e) {
+			s = null;
+		}
+			
+		if (s == null || s.getScheme() == null) {
+			// assume this is a file path
+			String filePath = "///" + new File(src).getAbsoluteFile().toString().replace('\\', '/');
+			try {
+				s = new URI("file", filePath, null);
+			} catch (URISyntaxException e1) {
+				logger.error("Invalid URI syntax for "+src);
+				return null;
+			}
+		}
+		return s.toString();
 	}
 }
