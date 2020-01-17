@@ -45,6 +45,7 @@ import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.SpdxConstants;
 import org.spdx.library.SpdxInvalidIdException;
 import org.spdx.library.model.IndividualUriValue;
+import org.spdx.library.model.SimpleUriValue;
 import org.spdx.library.model.SpdxInvalidTypeException;
 import org.spdx.library.model.SpdxModelFactory;
 import org.spdx.library.model.TypedValue;
@@ -103,6 +104,8 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 
 	private Property typeProperty;
 
+	private String documentNamespace;
+
 	/**
 	 * @param documentUri Unique URI for this document
 	 * @param model Model used to store this document
@@ -111,6 +114,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		Objects.requireNonNull(documentUri, "Missing required document URI");
 		Objects.requireNonNull(model, "Missing required model");
 		this.documentUri = documentUri;
+		this.documentNamespace = documentUri + "#";
 		this.model = model;
 		typeProperty = model.createProperty(RDF_TYPE);
 		model.register(nextIdListener);
@@ -519,7 +523,18 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			sValueType = Optional.empty();
 		}
 		if (sValueType.isPresent()) {
-			return Optional.of(new TypedValue(resourceToId(propertyValue.asResource()), sValueType.get()));
+			if (propertyValue.isURIResource() &&
+					!this.documentNamespace.equals(propertyValue.asResource().getNameSpace()) &&
+					SpdxConstants.EXTERNAL_SPDX_ELEMENT_URI_PATTERN.matcher(propertyValue.asResource().getURI()).matches()) {
+				// External document referenced element
+				return Optional.of(new SimpleUriValue(propertyValue.asResource().getURI()));
+			} else {
+				if (SpdxConstants.CLASS_SPDX_LICENSE.equals(sValueType.get())) {
+					// change to a concrete class - right now, listed licenses are the only concrete class
+					sValueType = Optional.of(SpdxConstants.CLASS_SPDX_LISTED_LICENSE);
+				}
+				return Optional.of(new TypedValue(resourceToId(propertyValue.asResource()), sValueType.get()));
+			}
 		} else {
 			if (propertyValue.isURIResource()) {
 				// Assume this is an individual value
