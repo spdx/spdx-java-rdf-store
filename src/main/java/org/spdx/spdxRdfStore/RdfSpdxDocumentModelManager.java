@@ -319,23 +319,23 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			if (!model.containsResource(resource)) {
 				// Try listed license URL
 				resource = model.createResource(idToListedLicenseUri(id));
-//				if (!model.containsResource(resource)) {
-//					if (ListedLicenses.getListedLicenses().isSpdxListedExceptionId(id)) {
-//						// add exception type
-//						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
-//								SpdxConstants.CLASS_SPDX_LICENSE_EXCEPTION));
-//					} else if (ListedLicenses.getListedLicenses().isSpdxListedLicenseId(id)) {
-//						// add listed license type
-//						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
-//								SpdxConstants.CLASS_SPDX_LISTED_LICENSE));
-//					} else {
-//						logger.error("ID "+id+" does not exist in the model.");
-//						throw new SpdxInvalidIdException("ID "+id+" does not exist in the model.");
-//					}
-//				}
+				if (!model.containsResource(resource)) {
+					if (ListedLicenses.getListedLicenses().isSpdxListedExceptionId(id)) {
+						// add exception type
+						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
+								SpdxConstants.CLASS_SPDX_LICENSE_EXCEPTION));
+					} else if (ListedLicenses.getListedLicenses().isSpdxListedLicenseId(id)) {
+						// add listed license type
+						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
+								SpdxConstants.CLASS_SPDX_LISTED_LICENSE));
+					} else {
+						logger.error("ID "+id+" does not exist in the model.");
+						throw new SpdxInvalidIdException("ID "+id+" does not exist in the model.");
+					}
+				}
 			}
 		}
-		if (!(resource.isURIResource() && resource.getURI().startsWith(SpdxConstants.LISTED_LICENSE_DOCUMENT_URI))) {
+		if (!(resource.isURIResource() && resource.getURI().startsWith(SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX))) {
 			Statement statement = model.getProperty(resource, typeProperty);
 			if (statement == null || !statement.getObject().isResource()) {
 				logger.error("ID "+id+" does not have a type.");
@@ -390,7 +390,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 * @return listed license URI for the license ID
 	 */
 	private String idToListedLicenseUri(String licenseId) {
-		return SpdxConstants.LISTED_LICENSE_DOCUMENT_URI + licenseId;
+		return SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX + licenseId;
 	}
 
 
@@ -663,7 +663,8 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				.filter((QuerySolution qs) -> {
 					RDFNode subject = qs.get("s");
 					RDFNode type = qs.get("type");
-					if (type.isResource() && subject.isResource()) {
+					if (type.isResource() && subject.isResource()
+						&& (!subject.isURIResource() || subject.asResource().getURI().startsWith(this.documentNamespace))) {
 						Optional<String> sType = SpdxResourceFactory.resourceToSpdxType(type.asResource());
 						if (sType.isPresent()) {
 							if (Objects.isNull(typeFilter)) {

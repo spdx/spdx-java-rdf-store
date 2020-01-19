@@ -477,7 +477,6 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		String documentNamespace = this.formDocNamespace(docUri);
 		RdfSpdxDocumentModelManager modelManager = new RdfSpdxDocumentModelManager(documentNamespace, model);
 		RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentNamespace, modelManager);
-		
 		if (!Objects.isNull(previousModel))  {
 			if (overwrite) {
 				logger.warn("Overwriting previous model from file for document URI "+documentNamespace);
