@@ -4,6 +4,7 @@
 package org.spdx.spdxRdfStore;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -93,8 +94,9 @@ public class RdfStoreTest extends TestCase {
 
 	/**
 	 * Test method for {@link org.spdx.spdxRdfStore.RdfStore#loadModelFromFile(java.lang.String, boolean)}.
+	 * @throws IOException 
 	 */
-	public void testLoadModelFromFile() throws InvalidSPDXAnalysisException {
+	public void testLoadModelFromFile() throws InvalidSPDXAnalysisException, IOException {
 		RdfStore rdfStore = new RdfStore();
 		rdfStore.loadModelFromFile(TEST_FILE_NAME, false);
 		SpdxDocument doc = new SpdxDocument(rdfStore, TEST_FILE_NAMESPACE, null, false);

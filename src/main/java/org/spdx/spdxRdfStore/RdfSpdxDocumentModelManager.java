@@ -1,5 +1,19 @@
 /**
+ * Copyright (c) 2020 Source Auditor Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
  * 
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
  */
 package org.spdx.spdxRdfStore;
 
@@ -50,6 +64,7 @@ import org.spdx.library.model.SpdxInvalidTypeException;
 import org.spdx.library.model.SpdxModelFactory;
 import org.spdx.library.model.TypedValue;
 import org.spdx.library.model.enumerations.SpdxEnumFactory;
+import org.spdx.library.model.license.ListedLicenses;
 import org.spdx.storage.IModelStore.IdType;
 import org.spdx.storage.IModelStore.IModelStoreLock;
 
@@ -304,17 +319,33 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			if (!model.containsResource(resource)) {
 				// Try listed license URL
 				resource = model.createResource(idToListedLicenseUri(id));
+//				if (!model.containsResource(resource)) {
+//					if (ListedLicenses.getListedLicenses().isSpdxListedExceptionId(id)) {
+//						// add exception type
+//						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
+//								SpdxConstants.CLASS_SPDX_LICENSE_EXCEPTION));
+//					} else if (ListedLicenses.getListedLicenses().isSpdxListedLicenseId(id)) {
+//						// add listed license type
+//						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
+//								SpdxConstants.CLASS_SPDX_LISTED_LICENSE));
+//					} else {
+//						logger.error("ID "+id+" does not exist in the model.");
+//						throw new SpdxInvalidIdException("ID "+id+" does not exist in the model.");
+//					}
+//				}
 			}
 		}
-		Statement statement = model.getProperty(resource, typeProperty);
-		if (statement == null || !statement.getObject().isResource()) {
-			logger.error("ID "+id+" does not have a type.");
-			throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
-		}
-		Optional<String> existingType = SpdxResourceFactory.resourceToSpdxType(statement.getObject().asResource());
-		if (!existingType.isPresent()) {
-			logger.error("ID "+id+" does not have a type.");
-			throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
+		if (!(resource.isURIResource() && resource.getURI().startsWith(SpdxConstants.LISTED_LICENSE_DOCUMENT_URI))) {
+			Statement statement = model.getProperty(resource, typeProperty);
+			if (statement == null || !statement.getObject().isResource()) {
+				logger.error("ID "+id+" does not have a type.");
+				throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
+			}
+			Optional<String> existingType = SpdxResourceFactory.resourceToSpdxType(statement.getObject().asResource());
+			if (!existingType.isPresent()) {
+				logger.error("ID "+id+" does not have a type.");
+				throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
+			}
 		}
 		return resource;
 	}
