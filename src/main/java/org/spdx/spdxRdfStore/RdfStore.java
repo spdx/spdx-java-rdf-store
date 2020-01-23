@@ -476,6 +476,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		String docUri = documentNode.getURI();
 		String documentNamespace = this.formDocNamespace(docUri);
 		RdfSpdxDocumentModelManager modelManager = new RdfSpdxDocumentModelManager(documentNamespace, model);
+		CompatibilityUpgrader.upgrade(model);
 		RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentNamespace, modelManager);
 		if (!Objects.isNull(previousModel))  {
 			if (overwrite) {

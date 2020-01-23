@@ -454,7 +454,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 * @return
 	 * @throws SpdxRdfException 
 	 */
-	private String resourceToPropertyName(RDFNode node) throws SpdxRdfException {
+	protected static String resourceToPropertyName(RDFNode node) throws SpdxRdfException {
 		Objects.requireNonNull(node, "Missing required node");
 		if (node.isAnon()) {
 			logger.error("Attempting to convert an anonomous node to a property name");

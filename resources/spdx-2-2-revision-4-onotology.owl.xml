@@ -1011,12 +1011,20 @@ Known issues:
     
 
 
+    <!-- http://spdx.org/rdf/terms#spdxVersion -->
+
+    <owl:DatatypeProperty rdf:about="http://spdx.org/rdf/terms#spdxVersion">
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+    
+
+
     <!-- http://spdx.org/rdf/terms#specVersion -->
 
     <owl:DatatypeProperty rdf:about="http://spdx.org/rdf/terms#specVersion">
         <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://spdx.org/rdf/terms#SpdxDocument"/>
         <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <owl:deprecated>Deprecated  - use spdxVersion</owl:deprecated>
         <ns:term_status xml:lang="en">stable</ns:term_status>
     </owl:DatatypeProperty>
     
@@ -1915,7 +1923,7 @@ Known issues:
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="http://spdx.org/rdf/terms#specVersion"/>
+                <owl:onProperty rdf:resource="http://spdx.org/rdf/terms#spdxVersion"/>
                 <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
                 <owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
             </owl:Restriction>
