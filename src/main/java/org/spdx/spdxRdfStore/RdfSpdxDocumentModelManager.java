@@ -18,6 +18,7 @@
 package org.spdx.spdxRdfStore;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -65,6 +66,7 @@ import org.spdx.library.model.SpdxModelFactory;
 import org.spdx.library.model.TypedValue;
 import org.spdx.library.model.enumerations.SpdxEnumFactory;
 import org.spdx.library.model.license.ListedLicenses;
+import org.spdx.library.referencetype.ListedReferenceTypes;
 import org.spdx.storage.IModelStore.IdType;
 import org.spdx.storage.IModelStore.IModelStoreLock;
 
@@ -311,6 +313,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	private Resource idToResource(String id) throws SpdxInvalidIdException {
 		Objects.requireNonNull(id, "Missing required ID");
 		Resource resource;
+		Optional<String> existingType = Optional.empty();
 		if (isAnonId(id)) {
 			resource = model.createResource(idToAnonId(id));
 		} else {
@@ -321,27 +324,42 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				resource = model.createResource(idToListedLicenseUri(id));
 				if (!model.containsResource(resource)) {
 					if (ListedLicenses.getListedLicenses().isSpdxListedExceptionId(id)) {
+						existingType = Optional.of(SpdxResourceFactory.typeToResource(
+								SpdxConstants.CLASS_SPDX_LICENSE_EXCEPTION).getURI());
 						// add exception type
-						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
-								SpdxConstants.CLASS_SPDX_LICENSE_EXCEPTION));
+//						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
+//								SpdxConstants.CLASS_SPDX_LICENSE_EXCEPTION));
 					} else if (ListedLicenses.getListedLicenses().isSpdxListedLicenseId(id)) {
+						existingType = Optional.of(SpdxResourceFactory.typeToResource(
+								SpdxConstants.CLASS_SPDX_LISTED_LICENSE).getURI());
 						// add listed license type
-						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
-								SpdxConstants.CLASS_SPDX_LISTED_LICENSE));
-					} else {
-						logger.error("ID "+id+" does not exist in the model.");
-						throw new SpdxInvalidIdException("ID "+id+" does not exist in the model.");
-					}
+//						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
+//								SpdxConstants.CLASS_SPDX_LISTED_LICENSE));
+					} else
+						try {
+							if (ListedReferenceTypes.getListedReferenceTypes().isListedReferenceType(new URI(SpdxConstants.SPDX_LISTED_REFERENCE_TYPES_PREFIX + id))) {
+								existingType = Optional.of(SpdxResourceFactory.typeToResource(
+										SpdxConstants.CLASS_SPDX_REFERENCE_TYPE).getURI());
+//								resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
+//										SpdxConstants.CLASS_SPDX_REFERENCE_TYPE));
+							} else {
+								logger.error("ID "+id+" does not exist in the model.");
+								throw new SpdxInvalidIdException("ID "+id+" does not exist in the model.");
+							}
+						} catch (URISyntaxException e) {
+							logger.error("ID "+id+" does not exist in the model.");
+							throw new SpdxInvalidIdException("ID "+id+" does not exist in the model.");
+						}
 				}
 			}
 		}
-		if (!(resource.isURIResource() && resource.getURI().startsWith(SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX))) {
+		if (!existingType.isPresent()) {
 			Statement statement = model.getProperty(resource, typeProperty);
 			if (statement == null || !statement.getObject().isResource()) {
 				logger.error("ID "+id+" does not have a type.");
 				throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
 			}
-			Optional<String> existingType = SpdxResourceFactory.resourceToSpdxType(statement.getObject().asResource());
+			existingType = SpdxResourceFactory.resourceToSpdxType(statement.getObject().asResource());
 			if (!existingType.isPresent()) {
 				logger.error("ID "+id+" does not have a type.");
 				throw new SpdxInvalidIdException("ID "+id+" does not have a type.");

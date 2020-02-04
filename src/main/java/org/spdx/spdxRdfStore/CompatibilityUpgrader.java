@@ -17,20 +17,32 @@
  */
 package org.spdx.spdxRdfStore;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
+import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.NodeIterator;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdf.model.StmtIterator;
+import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.SpdxConstants;
+import org.spdx.library.model.enumerations.AnnotationType;
+import org.spdx.library.model.enumerations.RelationshipType;
 
 /**
  * Updates the RDF model for compatibility with the current version of the spec
@@ -55,11 +67,12 @@ public class CompatibilityUpgrader {
 	 * Upgrade the properties in the model to the current version of the spec
 	 * @param model
 	 */
-	public static void upgrade(Model model) throws SpdxRdfException {
+	public static void upgrade(Model model) throws InvalidSPDXAnalysisException {
 		model.enterCriticalSection(false);
 		try {
+			// update type property names
 			for (Entry<String, Map<String, String>> entry:TYPE_PROPERTY_MAP.entrySet()) {
-				String query = "SELECT ?s ?type  WHERE { ?s  <" + 
+				String query = "SELECT ?s  WHERE { ?s  <" + 
 						RdfSpdxDocumentModelManager.RDF_TYPE + "> <" +
 						SpdxConstants.SPDX_NAMESPACE + entry.getKey() + "> }";
 				QueryExecution qe = QueryExecutionFactory.create(query, model);
@@ -80,10 +93,221 @@ public class CompatibilityUpgrader {
 					}
 				}
 			}
+			upgradeArtifactOf(model);
+			upgreadReviewers(model);
 		} finally {
 			model.leaveCriticalSection();
 		}
 	}
 
+	/**
+	 * Upgrade the reviewers field to Annotations with a type reviewer
+	 * @param model
+	 * @throws InvalidSPDXAnalysisException 
+	 */
+	@SuppressWarnings("deprecation")
+	private static void upgreadReviewers(Model model) throws InvalidSPDXAnalysisException {
+		Resource document = model.createResource(RdfStore.getDocumentNamespace(model) + "#" + SpdxConstants.SPDX_DOCUMENT_ID);
+		Property annotationProperty = model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_ANNOTATION);
+		Resource reviewerType = model.createResource(AnnotationType.REVIEW.getIndividualURI());
+		Property typeProperty = model.createProperty(RdfSpdxDocumentModelManager.RDF_TYPE);
+		Resource annotationClass = model.createResource(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_ANNOTATION);
+		Property commentProperty = model.createProperty(SpdxConstants.RDFS_NAMESPACE + SpdxConstants.RDFS_PROP_COMMENT);
+		Property annotatorProperty = model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_ANNOTATOR);
+		Property annotationDateProperty = model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_ANNOTATION_DATE);
+		Property annotationTypeProperty = model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_ANNOTATION_TYPE);
+		List<Statement> statementsToRemove = new ArrayList<>();
+		Set<Integer> addedAnnotations = new HashSet<>(); // to prevent duplicates
+		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#reviewer> ?o }";
+		QueryExecution qe = QueryExecutionFactory.create(query, model);
+		ResultSet result = qe.execSelect();
+		while (result.hasNext()) {
+			QuerySolution qs = result.next();
+			Resource review = qs.get("s").asResource();
+			String reviewer = qs.get("o").asLiteral().toString();
+			Resource annotation = model.createResource();
+			annotation.addProperty(typeProperty, annotationClass);
+			String reviewDate;
+			try {
+				reviewDate = review.getRequiredProperty(model.createProperty(
+						SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_REVIEW_DATE))
+						.getString();
+				if (Objects.isNull(reviewDate)) {
+					throw new InvalidSPDXAnalysisException("Missing or invalid review date for review");
+				}
+			} catch (Exception ex) {
+				throw new InvalidSPDXAnalysisException("Missing or invalid review date for review");
+			}
+			String comment;
+			try {
+				comment = review.getRequiredProperty(commentProperty).getString();
+				if (Objects.isNull(comment)) {
+					throw new InvalidSPDXAnalysisException("Missing or invalid review comment for review");
+				}
+			} catch (Exception ex) {
+				throw new InvalidSPDXAnalysisException("Missing or invalid review comment for review");
+			}
+			StmtIterator iter = review.listProperties();
+			while (iter.hasNext()) {
+				statementsToRemove.add(iter.next());
+			}
+			int hashOfAnnotation = reviewer.hashCode() ^ reviewDate.hashCode() ^ comment.hashCode();
+			if (addedAnnotations.contains(hashOfAnnotation)) {
+				continue;
+			}
+			addedAnnotations.add(hashOfAnnotation);
+			annotation.addProperty(annotatorProperty, reviewer);
+			annotation.addProperty(annotationDateProperty, reviewDate);
+			annotation.addProperty(commentProperty, comment);
+			annotation.addProperty(annotationTypeProperty, reviewerType);
+			document.addProperty(annotationProperty, annotation);
+		}
+		StmtIterator iter = document.listProperties(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_REVIEWED_BY));
+		while (iter.hasNext()) {
+			statementsToRemove.add(iter.next());
+		}
+		model.remove(statementsToRemove);
+	}
+
+	/**
+	 * Convert all artifactOf properties to relationships and remove the old properties and DOAP classes
+	 * @param model
+	 * @throws InvalidSPDXAnalysisException 
+	 */
+	private static void upgradeArtifactOf(Model model) throws InvalidSPDXAnalysisException {
+		String docNamespace = RdfStore.getDocumentNamespace(model) + "#";
+		Set<String> addedDoapProjects = new HashSet<String>();	// prevent duplicates
+		List<Statement> statementsToRemove = new ArrayList<>();
+		Property artifactOfProperty = model.createProperty("http://spdx.org/rdf/terms#artifactOf");
+		Property relationshipProperty = model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_RELATIONSHIP);
+		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#artifactOf> ?o }";
+		QueryExecution qe = QueryExecutionFactory.create(query, model);
+		ResultSet result = qe.execSelect();
+		String idPrefix = "SPDXRef-fromDoap-";
+		int nextSpdxIdNum = getNexId(model, docNamespace, idPrefix, 0);
+		while (result.hasNext()) {
+			QuerySolution qs = result.next();
+			Resource subject = qs.get("s").asResource();
+			Resource doapProject = qs.get("o").asResource();
+			statementsToRemove.add(model.createStatement(subject, artifactOfProperty, doapProject));
+			StmtIterator iter = doapProject.listProperties();
+			while (iter.hasNext()) {
+				statementsToRemove.add(iter.next());
+			}
+			Resource pkg = convertDoapProjectToSpdxPackage(model, doapProject, docNamespace + idPrefix + Integer.toString(nextSpdxIdNum));
+			if (!addedDoapProjects.contains(pkg.getURI())) {
+				addedDoapProjects.add(pkg.getURI());
+				nextSpdxIdNum = getNexId(model, docNamespace, idPrefix, nextSpdxIdNum);
+				Resource relationship = createRelationship(model, pkg, RelationshipType.GENERATED_FROM);
+				subject.addProperty(relationshipProperty, relationship);
+			}
+		}
+		model.remove(statementsToRemove);
+	}
+
+	/**
+	 * Creates an anonomous relationship resource
+	 * @param model
+	 * @param pkg
+	 * @param relationshipType
+	 * @return
+	 */
+	private static Resource createRelationship(Model model, Resource relatedElement, RelationshipType relationshipType) {
+		Resource retval = model.createResource();
+		retval.addProperty(model.createProperty(RdfSpdxDocumentModelManager.RDF_TYPE), 
+				model.createResource(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_RELATIONSHIP));
+		retval.addProperty(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_RELATED_SPDX_ELEMENT), relatedElement);
+		retval.addProperty(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_RELATIONSHIP_TYPE), 
+				model.createResource(relationshipType.getIndividualURI()));
+		return retval;
+	}
+
+	/**
+	 * @param model
+	 * @param docNamespace
+	 * @param idPrefix
+	 * @param startingNum Starting number to search for the next available ID
+	 * @return the next ID number available
+	 */
+	private static int getNexId(Model model, String docNamespace, String idPrefix, int startingNum) {
+		int retval = startingNum;
+		Resource idResource = model.getResource(docNamespace + idPrefix + Integer.toString(retval));
+		while (model.containsResource(idResource)) {
+			retval++;
+			idResource = model.getResource(docNamespace + idPrefix + Integer.toString(retval));
+		}
+		return retval;
+	}
+
+	/**
+	 * Convert a DOAP project resource into a package resource
+	 * @param model
+	 * @param doapProject
+	 * @return
+	 * @throws InvalidSPDXAnalysisException 
+	 */
+	private static Resource convertDoapProjectToSpdxPackage(Model model, Resource doapProject, String packageUri) throws InvalidSPDXAnalysisException {
+		String packageName;
+		try {
+			packageName = doapProject.getProperty(model.createProperty(SpdxConstants.DOAP_NAMESPACE + SpdxConstants.PROP_NAME)).getString();
+		} catch (Exception ex) {
+			throw new InvalidSPDXAnalysisException("DOAP project name is not a valid string");
+		}
+		if (Objects.isNull(packageName)) {
+			throw new InvalidSPDXAnalysisException("Missing required DOAP project name");
+		}
+		String homePage = null;
+		Property homePageProperty = model.createProperty(SpdxConstants.DOAP_NAMESPACE + SpdxConstants.PROP_PROJECT_HOMEPAGE);
+		try {
+			homePage = doapProject.getProperty(homePageProperty).getString();
+		} catch (Exception ex) {
+			homePage = null;
+		}
+		String addedPackageComment = "This package was converted from a DOAP Project by the same name";
+		Property commentProperty = model.createProperty(SpdxConstants.RDFS_NAMESPACE + SpdxConstants.RDFS_PROP_COMMENT);
+		Property nameProperty = model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_NAME);
+		// See if there is already a package matching the name and home page		
+		ResIterator iter = model.listResourcesWithProperty(nameProperty, packageName);
+		while (iter.hasNext()) {
+			Resource pkg = iter.next();
+			if (Objects.nonNull(homePage)) {
+				Statement homePageStatement = pkg.getProperty(homePageProperty);
+				if (Objects.nonNull(homePageStatement) && 
+						homePage.equals(homePageStatement.getObject().asLiteral().getString())) {
+					return pkg;
+				}
+			} else {
+				// check for the comment to see if we already added this
+				Statement commentStatment = pkg.getProperty(commentProperty);
+				if (Objects.nonNull(commentStatment) &&
+						addedPackageComment.equals(commentStatment.getObject().asLiteral().getString())) {
+					return pkg;
+				}
+			}
+		}
+		Resource retval = model.createResource(packageUri);
+		retval.addProperty(model.createProperty(RdfSpdxDocumentModelManager.RDF_TYPE), 
+				model.createResource(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_PACKAGE));
+		// download location
+		Resource noAssertion = model.createResource(SpdxConstants.URI_VALUE_NOASSERTION);
+		retval.addProperty(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_PACKAGE_DOWNLOAD_URL), noAssertion);
+		// concludedLicense
+		retval.addProperty(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_PACKAGE_CONCLUDED_LICENSE), noAssertion);
+		// declaredLicense
+		retval.addProperty(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_PACKAGE_DECLARED_LICENSE), noAssertion);
+		// copyright
+		retval.addProperty(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_PACKAGE_DECLARED_COPYRIGHT), noAssertion);
+		// comment
+		retval.addProperty(commentProperty, addedPackageComment);
+		// filesAnalyzed
+		retval.addLiteral(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_PACKAGE_FILES_ANALYZED), false);
+		// name
+		retval.addLiteral(nameProperty, packageName);
+		// homePage
+		if (Objects.nonNull(homePage)) {
+			retval.addLiteral(homePageProperty, homePage);
+		}
+		return retval;
+	}
 	
 }

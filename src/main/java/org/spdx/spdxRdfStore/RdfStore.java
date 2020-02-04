@@ -432,7 +432,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 * @param docUriString String form of the SPDX document URI
 	 * @return
 	 */
-	private String formDocNamespace(String docUriString) {
+	private static String formDocNamespace(String docUriString) {
 		// just remove any fragments for the DOC URI
 		int fragmentIndex = docUriString.indexOf('#');
 		if (fragmentIndex <= 0) {
@@ -441,10 +441,11 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 			return docUriString.substring(0, fragmentIndex);
 		}
 	}
+	
 	/**
 	 * @return the spdx doc node from the model
 	 */
-	private Node getSpdxDocNode(Model model) {
+	public static Node getSpdxDocNode(Model model) {
 		Node spdxDocNode = null;
 		Node rdfTypePredicate = model.getProperty(SpdxConstants.RDF_NAMESPACE, SpdxConstants.RDF_PROP_TYPE).asNode();
 		Node spdxDocObject = model.getProperty(SpdxConstants.SPDX_NAMESPACE, SpdxConstants.CLASS_SPDX_DOCUMENT).asNode();
@@ -456,6 +457,23 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		}
 		return spdxDocNode;
 	}
+	
+	/**
+	 * @param model model containing a single document
+	 * @return the document namespace for the document stored in the model
+	 * @throws InvalidSPDXAnalysisException 
+	 */
+	public static String getDocumentNamespace(Model model) throws InvalidSPDXAnalysisException {
+		Node documentNode = getSpdxDocNode(model);
+		if (documentNode == null) {
+			throw(new InvalidSPDXAnalysisException("Invalid model - must contain an SPDX Document"));
+		}
+		if (!documentNode.isURI()) {
+			throw(new InvalidSPDXAnalysisException("SPDX Documents must have a unique URI"));
+		}
+		String docUri = documentNode.getURI();
+		return formDocNamespace(docUri);
+	}
 
 	@Override
 	public void serialize(String documentUri, OutputStream stream) throws InvalidSPDXAnalysisException, IOException {
@@ -466,15 +484,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	public String deSerialize(InputStream stream, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
 		Model model = ModelFactory.createDefaultModel();
 		model.read(stream, null);
-		Node documentNode = getSpdxDocNode(model);
-		if (documentNode == null) {
-			throw(new InvalidSPDXAnalysisException("Invalid model - must contain an SPDX Document"));
-		}
-		if (!documentNode.isURI()) {
-			throw(new InvalidSPDXAnalysisException("SPDX Documents must have a unique URI"));
-		}
-		String docUri = documentNode.getURI();
-		String documentNamespace = this.formDocNamespace(docUri);
+		String documentNamespace = getDocumentNamespace(model);
 		RdfSpdxDocumentModelManager modelManager = new RdfSpdxDocumentModelManager(documentNamespace, model);
 		CompatibilityUpgrader.upgrade(model);
 		RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentNamespace, modelManager);
