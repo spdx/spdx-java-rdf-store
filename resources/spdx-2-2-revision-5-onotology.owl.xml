@@ -1568,6 +1568,7 @@ Known issues:
     <!-- http://spdx.org/rdf/terms#ListedLicense -->
 
     <owl:Class rdf:about="http://spdx.org/rdf/terms#ListedLicense">
+        <rdfs:subClassOf rdf:resource="http://spdx.org/rdf/terms#License"/>
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="http://spdx.org/rdf/terms#isDeprecatedLicenseId"/>
