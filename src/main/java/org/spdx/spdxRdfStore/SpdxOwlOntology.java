@@ -20,17 +20,24 @@ package org.spdx.spdxRdfStore;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
+import org.apache.jena.ontology.DatatypeProperty;
 import org.apache.jena.ontology.OntClass;
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.ontology.OntModelSpec;
 import org.apache.jena.ontology.OntProperty;
+import org.apache.jena.ontology.OntResource;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.SimpleSelector;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.util.iterator.ExtendedIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spdx.library.SpdxConstants;
@@ -61,6 +68,31 @@ public class SpdxOwlOntology {
 	Property RANGE_PROPERTY;
 	Property ON_CLASS_PROPERTY;
 	Property ON_DATA_RANGE_PROPERTY;
+	
+	static final Map<String, Class<? extends Object>> DATA_TYPE_TO_CLASS;
+	
+	static {
+		// Note: We only use the types supported by the storage manager Integer, Boolean, String
+		Map<String, Class<? extends Object>> dataTypeMap = new HashMap<>();
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "string", String.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "hexBinary", String.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "anyURI", String.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "dateTime", String.class);
+		dataTypeMap.put(SpdxConstants.RDFS_NAMESPACE + "Literal", String.class);
+		
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "int", Integer.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "integer", Integer.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "short", Integer.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "byte", Integer.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "unsignedShort", Integer.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "unsignedInt", Integer.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "unsignedByte", Integer.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "positiveInteger", Integer.class);
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "nonNegativeInteger", Integer.class);
+		
+		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "boolean", Boolean.class);
+		DATA_TYPE_TO_CLASS = Collections.unmodifiableMap(dataTypeMap);
+	}
 
 	
 	public static synchronized SpdxOwlOntology getSpdxOwlOntology() {
@@ -93,6 +125,34 @@ public class SpdxOwlOntology {
 		} catch (IOException e) {
 			throw new RuntimeException("I/O error in the SPDX OWL ontology file",e);
 		}
+	}
+	
+	/**
+	 * Search the ontology range for a property and return the Java class that best matches the property type
+	 * @param p property to search for the class range
+	 * @return
+	 */
+	public Optional<Class<? extends Object>> getPropertyClass(Property p) {
+		if (!p.isURIResource()) {
+			return Optional.empty();
+		}
+		DatatypeProperty dataProperty = this.model.getDatatypeProperty(p.getURI());
+		if (Objects.isNull(dataProperty)) {
+			return Optional.empty();
+		}
+		ExtendedIterator<? extends OntResource> rangeIter = dataProperty.listRange();
+		while (rangeIter.hasNext()) {
+			OntResource range = rangeIter.next();
+			if (range.isURIResource()) {
+				Class<? extends Object> retval = DATA_TYPE_TO_CLASS.get(range.getURI());
+				if (Objects.nonNull(retval)) {
+					return Optional.of(retval);
+				} else {
+					logger.warn("Unknown data type: "+range.toString());
+				}
+			}
+		}
+		return Optional.empty();
 	}
 	
 	public OntModel getModel() {
@@ -217,13 +277,13 @@ public class SpdxOwlOntology {
 		return (exactCardinality == -1 && (maxCardinality == -1) || (maxCardinality > 1)) || exactCardinality > 1;
 	}
 
-/**
- * Adds restriction statement to the propertyRestrictions list
- * @param ontClass class related to the property - all superclasses will be searched
- * @param property property on which the restriction occurs
- * @param propertyRestrictions list of all statements containing a restriction on the property within the class and all superclasses (including transitivie superclasses)
- */
-private void addPropertyRestrictions(OntClass ontClass, OntProperty property, List<Statement> propertyRestrictions) {	
+	/**
+	 * Adds restriction statement to the propertyRestrictions list
+	 * @param ontClass class related to the property - all superclasses will be searched
+	 * @param property property on which the restriction occurs
+	 * @param propertyRestrictions list of all statements containing a restriction on the property within the class and all superclasses (including transitivie superclasses)
+	 */
+	private void addPropertyRestrictions(OntClass ontClass, OntProperty property, List<Statement> propertyRestrictions) {	
 		if (ontClass.isRestriction()) {
 			if (model.listStatements(new SimpleSelector(ontClass, ON_PROPERTY_PROPERTY, property)).hasNext()) {
 				// matches the property

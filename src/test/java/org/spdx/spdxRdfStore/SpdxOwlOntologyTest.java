@@ -5,8 +5,11 @@ package org.spdx.spdxRdfStore;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.jena.ontology.OntModel;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.spdx.library.SpdxConstants;
 
 import junit.framework.TestCase;
@@ -73,5 +76,18 @@ public class SpdxOwlOntologyTest extends TestCase {
 				SpdxConstants.RDFS_NAMESPACE + SpdxConstants.RDFS_PROP_COMMENT);
 		assertEquals(1, result.size());
 		assertEquals("http://www.w3.org/2001/XMLSchema#string", result.get(0));
+	}
+	
+	public void testGetPropertyClass() throws SpdxRdfException {
+		Model model = ModelFactory.createDefaultModel();
+		Optional<Class<? extends Object>> dataClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(
+					model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_COPYRIGHT_TEXT));
+		assertEquals(Optional.of(String.class), dataClass);
+		dataClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(
+				model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_STD_LICENSE_FSF_LIBRE));
+	assertEquals(Optional.of(Boolean.class), dataClass);
+	dataClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(
+			model.createProperty(SpdxConstants.RDF_POINTER_NAMESPACE + SpdxConstants.PROP_POINTER_OFFSET));
+	assertEquals(Optional.of(Integer.class), dataClass);
 	}
 }

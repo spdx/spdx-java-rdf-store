@@ -546,7 +546,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			if (!iter.hasNext()) {
 				return Optional.empty();
 			}
-			Optional<Object> result = valueNodeToObject(iter.next());
+			Optional<Object> result = valueNodeToObject(iter.next(), property);
 			if (iter.hasNext()) {
 				logger.error("Error getting single value.  Multiple values for property "+propertyName+" ID "+id+".");
 				throw new SpdxRdfException("Error getting single value.  Multiple values for property "+propertyName+" ID "+id+".");
@@ -557,12 +557,39 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		}
 	}
 	
-	private Optional<Object> valueNodeToObject(RDFNode propertyValue) throws InvalidSPDXAnalysisException {
+	/**
+	 * Convert a node in the RDF graph to a Java object
+	 * @param propertyValue node containing the value
+	 * @param property property which references the value
+	 * @return
+	 * @throws InvalidSPDXAnalysisException
+	 */
+	private Optional<Object> valueNodeToObject(RDFNode propertyValue, Property property) throws InvalidSPDXAnalysisException {
 		if (Objects.isNull(propertyValue)) {
 			return Optional.empty();
 		}
 		if (propertyValue.isLiteral()) {
-			return Optional.of(propertyValue.asLiteral().getValue());
+			Object retval = propertyValue.asLiteral().getValue();
+			if (retval instanceof String) {
+				// need to check type and convert to boolean or integer
+				Optional<Class<? extends Object>> propertyClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(property);
+				if (propertyClass.isPresent()) {
+					if (Integer.class.equals(propertyClass.get())) {
+						try {
+							retval = Integer.parseInt((String)retval);
+						} catch(NumberFormatException ex) {
+							throw new InvalidSPDXAnalysisException("Invalid integer format for property "+property.toString(), ex);
+						}
+					} else if (Boolean.class.equals(propertyClass.get())) {
+						try {
+							retval = Boolean.valueOf((String)retval);
+						} catch(Exception ex) {
+							throw new InvalidSPDXAnalysisException("Invalid boolean format for property "+property.toString(), ex);
+						}
+					}
+				}
+			}
+			return Optional.of(retval);
 		}
 		Resource valueType = propertyValue.asResource().getPropertyResourceValue(RDF.type);
 		Optional<String> sValueType;
@@ -839,7 +866,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
 			model.listObjectsOfProperty(idResource, property).toList().forEach((RDFNode node) -> {
 				try {
-					Optional<Object> value = valueNodeToObject(node);
+					Optional<Object> value = valueNodeToObject(node, property);
 					if (value.isPresent()) {
 						retval.add(value.get());
 					}
@@ -941,7 +968,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			NodeIterator iter = model.listObjectsOfProperty(idResource, property);
 			while (iter.hasNext()) {
 				RDFNode node = iter.next();
-				Optional<Object> value = valueNodeToObject(node);
+				Optional<Object> value = valueNodeToObject(node, property);
 				if (value.isPresent() && !clazz.isAssignableFrom(value.get().getClass())) {
 					if (!value.isPresent()) {
 						return false;
@@ -1001,7 +1028,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			if (!iter.hasNext()) {
 				return false;	// I guess you can assign anything and be compatible?
 			}
-			Optional<Object> objectValue = valueNodeToObject(iter.next());
+			Optional<Object> objectValue = valueNodeToObject(iter.next(), property);
 			if (iter.hasNext()) {
 				logger.error("Error getting single value.  Multiple values for property "+propertyName+" ID "+id+".");
 				throw new SpdxRdfException("Error getting single value.  Multiple values for property "+propertyName+" ID "+id+".");
