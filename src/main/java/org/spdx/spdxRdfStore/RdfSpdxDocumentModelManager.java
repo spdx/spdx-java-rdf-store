@@ -573,8 +573,9 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		}
 		if (sValueType.isPresent()) {
 			if (propertyValue.isURIResource() &&
+					(SpdxConstants.CLASS_SPDX_REFERENCE_TYPE.equals(sValueType.get()) ||
 					!this.documentNamespace.equals(propertyValue.asResource().getNameSpace()) &&
-					SpdxConstants.EXTERNAL_SPDX_ELEMENT_URI_PATTERN.matcher(propertyValue.asResource().getURI()).matches()) {
+					SpdxConstants.EXTERNAL_SPDX_ELEMENT_URI_PATTERN.matcher(propertyValue.asResource().getURI()).matches())) {
 				// External document referenced element
 				return Optional.of(new SimpleUriValue(propertyValue.asResource().getURI()));
 			} else {

@@ -12,6 +12,8 @@ import java.util.stream.Stream;
 
 import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.SpdxConstants;
+import org.spdx.library.model.ExternalRef;
+import org.spdx.library.model.ReferenceType;
 import org.spdx.library.model.SpdxDocument;
 import org.spdx.library.model.SpdxElement;
 import org.spdx.library.model.SpdxFile;
@@ -120,6 +122,13 @@ public class RdfStoreTest extends TestCase {
 		documentDescribes.remove(describedFile);
 		assertEquals(1, documentDescribes.size());
 		assertTrue(documentDescribes.contains(describedPackage));
+		// test for errors in the ReferenceType
+		Collection<ExternalRef> externalRefs = describedPackage.getExternalRefs();
+		for (ExternalRef externalRef:externalRefs) {
+			ReferenceType refType = externalRef.getReferenceType();
+			String refUri = refType.getIndividualURI();
+			assertFalse(refUri.isEmpty());
+		}
 		
 		try {
 			rdfStore.loadModelFromFile(TEST_FILE_NAME, false);

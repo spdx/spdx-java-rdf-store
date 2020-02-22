@@ -39,8 +39,11 @@ import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.StmtIterator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.SpdxConstants;
+import org.spdx.library.SpdxVerificationHelper;
 import org.spdx.library.model.enumerations.AnnotationType;
 import org.spdx.library.model.enumerations.RelationshipType;
 
@@ -52,6 +55,7 @@ import org.spdx.library.model.enumerations.RelationshipType;
 public class CompatibilityUpgrader {
 	
 	static final Map<String, Map<String, String>> TYPE_PROPERTY_MAP;
+	static final Logger logger = LoggerFactory.getLogger(CompatibilityUpgrader.class);
 	
 	static {
 		Map<String, Map<String, String>> mutableTypePropertyMap = new HashMap<>();
@@ -94,10 +98,58 @@ public class CompatibilityUpgrader {
 				}
 			}
 			upgradeArtifactOf(model);
-			upgreadReviewers(model);
+			upgradeReviewers(model);
+			upgradeExternalDocumentRefs(model);
 		} finally {
 			model.leaveCriticalSection();
 		}
+	}
+
+	/**
+	 * Make sure all external document Ref's have a URI with proper ID rather than using the externalDocumentId property
+	 * @param model
+	 * @throws InvalidSPDXAnalysisException 
+	 */
+	private static void upgradeExternalDocumentRefs(Model model) throws InvalidSPDXAnalysisException {
+		String documentNamespace = RdfStore.getDocumentNamespace(model);
+		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#externalDocumentId> ?o }";
+		QueryExecution qe = QueryExecutionFactory.create(query, model);
+		ResultSet result = qe.execSelect();
+		List<Statement> statementsToRemove = new ArrayList<>();
+		List<Statement> statementsToAdd = new ArrayList<>();
+		while (result.hasNext()) {
+			QuerySolution qs = result.next();
+			try {
+				Resource currentExternalRef = qs.get("s").asResource();
+				String id = qs.get("o").asLiteral().getString();
+				if (!SpdxVerificationHelper.isValidExternalDocRef(id)) {
+					throw new InvalidSPDXAnalysisException("Invalid external document ref "+id);
+				}
+				String uri = documentNamespace + "#" + id;
+				if (!currentExternalRef.isURIResource() || uri.equals(currentExternalRef.getURI())) {
+					// need to replace this external ref with one with a valid document ID
+					Resource newExternalRef = model.createResource(uri);
+					// get all the properties and copy them over
+					StmtIterator currentPropIter = currentExternalRef.listProperties();
+					while (currentPropIter.hasNext()) {
+						Statement stmt = currentPropIter.next();
+						statementsToAdd.add(model.createStatement(newExternalRef, stmt.getPredicate(), stmt.getObject()));
+						statementsToRemove.add(stmt);
+					}
+					// change all references from the old value to this one
+					StmtIterator currentExternalRefRefs = model.listStatements(null, null, currentExternalRef);
+					while (currentExternalRefRefs.hasNext()) {
+						Statement stmt = currentExternalRefRefs.next();
+						statementsToAdd.add(model.createStatement(stmt.getSubject(), stmt.getPredicate(), newExternalRef));
+						statementsToRemove.add(stmt);
+					}
+				}
+			} catch(Exception ex) {
+				throw new InvalidSPDXAnalysisException("Error upgrading external document refs",ex);
+			}
+		}
+		model.remove(statementsToRemove);
+		model.add(statementsToAdd);
 	}
 
 	/**
@@ -106,7 +158,7 @@ public class CompatibilityUpgrader {
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	@SuppressWarnings("deprecation")
-	private static void upgreadReviewers(Model model) throws InvalidSPDXAnalysisException {
+	private static void upgradeReviewers(Model model) throws InvalidSPDXAnalysisException {
 		Resource document = model.createResource(RdfStore.getDocumentNamespace(model) + "#" + SpdxConstants.SPDX_DOCUMENT_ID);
 		Property annotationProperty = model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_ANNOTATION);
 		Resource reviewerType = model.createResource(AnnotationType.REVIEW.getIndividualURI());

@@ -6,7 +6,6 @@
      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
      xmlns:xml="http://www.w3.org/XML/1998/namespace"
      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
-     xmlns:foaf="http://xmlns.com/foaf/0.1/"
      xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
     <owl:Ontology rdf:about="http://spdx.org/rdf/terms">
         <rdfs:comment>This specification describes the SPDX® language, defined as a dictionary of named properties and classes using W3C&apos;s RDF Technology.
@@ -1955,7 +1954,7 @@ Known issues:
             <owl:Restriction>
                 <owl:onProperty rdf:resource="http://spdx.org/rdf/terms#dataLicense"/>
                 <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
-                <owl:onClass rdf:resource="http://spdx.org/rdf/terms#File"/>
+                <owl:onClass rdf:resource="http://spdx.org/rdf/terms#AnyLicenseInfo"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
