@@ -6,6 +6,7 @@ package org.spdx.spdxRdfStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -255,8 +256,8 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 			}
 		});
 
-		assertCollectionsEquals(TEST_LIST_PROPERTY_VALUES[0], store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]));
-		assertCollectionsEquals(TEST_LIST_PROPERTY_VALUES[0], store.getValueList(TEST_ID2, TEST_LIST_PROPERTIES[0]));
+		assertCollectionsEquals(TEST_LIST_PROPERTY_VALUES[0], toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])));
+		assertCollectionsEquals(TEST_LIST_PROPERTY_VALUES[0], toList(store.getValueList(TEST_ID2, TEST_LIST_PROPERTIES[0])));
 		store.removeProperty(TEST_ID1, TEST_LIST_PROPERTIES[0]);
 		assertFalse(store.getPropertyValue(TEST_ID1, TEST_LIST_PROPERTIES[0]).isPresent());
 		TEST_LIST_PROPERTY_VALUES[0].forEach(e -> {
@@ -368,14 +369,22 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		String value2 = "value2";
 		store.addValueToCollection( TEST_ID1, TEST_LIST_PROPERTIES[0], value1);
 		store.addValueToCollection(TEST_ID1, TEST_LIST_PROPERTIES[0], value2);
-		assertEquals(2, store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).size());
-		assertTrue(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).contains(value1));
-		assertTrue(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).contains(value2));
+		assertEquals(2, toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).size());
+		assertTrue(toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).contains(value1));
+		assertTrue(toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).contains(value2));
 		assertTrue(store.removeValueFromCollection(TEST_ID1, TEST_LIST_PROPERTIES[0], value1));
-		assertEquals(1, store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).size());
-		assertFalse(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).contains(value1));
-		assertTrue(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).contains(value2));
+		assertEquals(1, toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).size());
+		assertFalse(toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).contains(value1));
+		assertTrue(toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).contains(value2));
 		assertFalse("Already removed - should return false",store.removeValueFromCollection(TEST_ID1, TEST_LIST_PROPERTIES[0], value1));
+	}
+	
+	List<Object> toList(Iterator<Object> iter) {
+		List<Object> retval = new ArrayList<Object>();
+		while (iter.hasNext()) {
+			retval.add(iter.next());
+		}
+		return retval;
 	}
 
 	/**
@@ -429,12 +438,12 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		String value2 = "value2";
 		store.addValueToCollection(TEST_ID1, TEST_LIST_PROPERTIES[0], value1);
 		store.addValueToCollection(TEST_ID1, TEST_LIST_PROPERTIES[0], value2);
-		assertEquals(2, store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).size());
-		assertTrue(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).contains(value1));
-		assertTrue(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).contains(value2));
+		assertEquals(2, toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).size());
+		assertTrue(toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).contains(value1));
+		assertTrue(toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).contains(value2));
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_LIST_PROPERTIES[0]).isPresent());
 		store.clearValueCollection(TEST_ID1, TEST_LIST_PROPERTIES[0]);
-		assertEquals(0, store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).size());
+		assertEquals(0, toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).size());
 	}
 
 	/**
@@ -451,9 +460,9 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		String value2 = "value2";
 		assertTrue(store.addValueToCollection(TEST_ID1, TEST_LIST_PROPERTIES[0], value1));
 		assertTrue(store.addValueToCollection(TEST_ID1, TEST_LIST_PROPERTIES[0], value2));
-		assertEquals(2, store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).size());
-		assertTrue(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).contains(value1));
-		assertTrue(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0]).contains(value2));
+		assertEquals(2, toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).size());
+		assertTrue(toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).contains(value1));
+		assertTrue(toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])).contains(value2));
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_LIST_PROPERTIES[0]).isPresent());
 	}
 

@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -88,6 +89,43 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	static final String RDF_TYPE = SpdxConstants.RDF_NAMESPACE + SpdxConstants.RDF_PROP_TYPE;
 	
 	static final Set<String> LISTED_LICENSE_CLASSES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(SpdxConstants.LISTED_LICENSE_URI_CLASSES)));
+	
+	public class RdfListIterator implements Iterator<Object> {
+		
+		NodeIterator listIterator;
+		private Property property;
+
+		public RdfListIterator(Resource idResource, Property property) {
+			Objects.requireNonNull(idResource, "ID resource can not be null");
+			Objects.requireNonNull(property, "Property resource can not be null");
+			listIterator = model.listObjectsOfProperty(idResource, property);
+			this.property = property;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return listIterator.hasNext();
+		}
+
+		@Override
+		public Object next() {
+			RDFNode node = listIterator.next();
+			if (Objects.isNull(node)) {
+				return null;
+			}
+			try {
+				Optional<Object> value = valueNodeToObject(node, property);
+				if (value.isPresent()) {
+					return value.get();
+				} else {
+					return null;
+				}
+			} catch (InvalidSPDXAnalysisException e) {
+				throw new RuntimeException(e);
+			}
+		}
+		
+	}
 	
 	/**
 	 * Listen for any new resources being created to make sure we update the next ID numbers
@@ -856,28 +894,12 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 * @return the list of values associated with id propertyName
 	 * @throws InvalidSPDXAnalysisException
 	 */
-	public List<Object> getValueList(String id, String propertyName) throws InvalidSPDXAnalysisException {
+	public Iterator<Object> getValueList(String id, String propertyName) throws InvalidSPDXAnalysisException {
 		Objects.requireNonNull(id, "Missing required ID");
 		Objects.requireNonNull(propertyName, "Missing required property name");
-		model.enterCriticalSection(false);
-		try {
-			Resource idResource = idToResource(id);
-			List<Object> retval = new ArrayList<>();
-			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
-			model.listObjectsOfProperty(idResource, property).toList().forEach((RDFNode node) -> {
-				try {
-					Optional<Object> value = valueNodeToObject(node, property);
-					if (value.isPresent()) {
-						retval.add(value.get());
-					}
-				} catch (InvalidSPDXAnalysisException e) {
-					logger.warn("Exception adding value to node.  Skipping "+node.toString(), e);
-				}
-			}); 
-			return retval;
-		} finally {
-			model.leaveCriticalSection();
-		}
+		Resource idResource = idToResource(id);
+		Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
+		return new RdfListIterator(idResource, property);
 	}
 	
 	/**

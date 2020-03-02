@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -324,7 +325,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#getValueList(java.lang.String, java.lang.String, java.lang.String)
 	 */
-	public List<Object> getValueList(String documentUri, String id, String propertyName)
+	public Iterator<Object> listValues(String documentUri, String id, String propertyName)
 			throws InvalidSPDXAnalysisException {
 		Objects.requireNonNull(documentUri, "Missing required document URI");
 		Objects.requireNonNull(id, "Missing required ID");
