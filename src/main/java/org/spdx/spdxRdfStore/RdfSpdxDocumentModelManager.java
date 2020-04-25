@@ -17,14 +17,17 @@
  */
 package org.spdx.spdxRdfStore;
 
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -60,6 +63,7 @@ import org.slf4j.LoggerFactory;
 import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.SpdxConstants;
 import org.spdx.library.SpdxInvalidIdException;
+import org.spdx.library.model.DuplicateSpdxIdException;
 import org.spdx.library.model.IndividualUriValue;
 import org.spdx.library.model.SimpleUriValue;
 import org.spdx.library.model.SpdxInvalidTypeException;
@@ -135,14 +139,28 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		@Override
 		public void added(Object x) {
 			if (x instanceof RDFNode) {
-				updateCounters((RDFNode)x);
+				checkAddNewId((RDFNode)x);
 			} else if (x instanceof Statement) {
 				Statement st = (Statement)x;
 				if (Objects.nonNull(st.getSubject())) {
-					updateCounters(st.getSubject());
+					checkAddNewId(st.getSubject());
 				}
 			}
 		}
+		
+		@Override
+		public void removed(Object x) {
+			if (x instanceof RDFNode) {
+				checkRemoveId((RDFNode)x);
+			} else if (x instanceof Statement) {
+				Statement st = (Statement)x;
+				if (Objects.nonNull(st.getSubject())) {
+					checkRemoveId(st.getSubject());
+				}
+			}
+		}
+		
+		
 	}
 	
 	private ReadWriteLock counterLock = new ReentrantReadWriteLock();
@@ -150,6 +168,10 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	
 	private String documentUri;
 	private Model model;
+	/**
+	 * Map of a lower case ID to the case sensitive ID
+	 */
+	private Map<String, String> idCaseSensitiveMap = new HashMap<String, String>();
 
 	private int nextNextSpdxId = 1;
 
@@ -238,7 +260,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 * Compare the next ID to the ID in the matcher.  Update if the matcher ID is greater than the current ID
 	 * @param licenseRefMatcher
 	 */
-	private synchronized void checkUpdateNextLicenseId(Matcher licenseRefMatcher) {
+	private synchronized void checkUpdateLicenseId(Matcher licenseRefMatcher) {
 		counterLock.writeLock().lock();
 		try {
 			String strNum = licenseRefMatcher.group(1);
@@ -263,12 +285,28 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		}
 	}
 	
-	
 	/**
-	 * Update the counter based on the ID represented by the node
+	 * Checks to see if all instances of an ID has been removed and removes the entry
+	 * from the case insensitive map if there are no more instances
 	 * @param node
 	 */
-	private void updateCounters(RDFNode node) {
+	private synchronized void checkRemoveId(RDFNode node) {
+		Objects.requireNonNull(node);
+		if (node.isResource() && !model.containsResource(node) && !node.isAnon()) {
+			String id = node.asResource().getLocalName();
+			if (id.startsWith(SpdxConstants.EXTERNAL_DOC_REF_PRENUM) || id.startsWith(SpdxConstants.NON_STD_LICENSE_ID_PRENUM) ||
+					id.startsWith(SpdxConstants.SPDX_ELEMENT_REF_PRENUM)) {
+				this.idCaseSensitiveMap.remove(id.toLowerCase());
+			}
+		}
+	}
+	
+	
+	/**
+	 * Checks for a new ID updating the next ID and map of case insensitive to case sensitive ID's
+	 * @param node
+	 */
+	private void checkAddNewId(RDFNode node) {
 		Objects.requireNonNull(node);
 		if (node.isResource()) {
 			if (node.isAnon()) {
@@ -278,9 +316,16 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			if (Objects.isNull(id)) {
 				return;
 			}
+			if (id.startsWith(SpdxConstants.EXTERNAL_DOC_REF_PRENUM) || id.startsWith(SpdxConstants.NON_STD_LICENSE_ID_PRENUM) ||
+					id.startsWith(SpdxConstants.SPDX_ELEMENT_REF_PRENUM)) {
+				String previous = idCaseSensitiveMap.put(id.toLowerCase(), id);
+				if (Objects.nonNull(previous)) {
+					logger.warn("Possibly ambiguous ID being introduced.  "+previous+" is being raplaced by "+id);
+				}
+			}
 			Matcher licenseRefMatcher = SpdxConstants.LICENSE_ID_PATTERN_NUMERIC.matcher(id);
 			if (licenseRefMatcher.matches()) {
-				checkUpdateNextLicenseId(licenseRefMatcher);
+				checkUpdateLicenseId(licenseRefMatcher);
 				return;
 			}
 			Matcher documentIdMatcher = RdfStore.DOCUMENT_ID_PATTERN_NUMERIC.matcher(id);
@@ -304,7 +349,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		try {
 			ResIterator iter = model.listSubjects();
 			while (iter.hasNext()) {
-				updateCounters(iter.next());
+				checkAddNewId(iter.next());
 			}
 		} finally {
 			model.leaveCriticalSection();
@@ -449,15 +494,15 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		return SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX + licenseId;
 	}
 
-
 	/**
-	 * Create a new resource with and ID and type
+	 * Gets an existing or creates a new resource with and ID and type
 	 * @param id ID used in the SPDX model
 	 * @param type SPDX Type
-	 * @return the created resource
+	 * @return the resource
 	 * @throws SpdxInvalidIdException
+	 * @throws DuplicateSpdxIdException 
 	 */
-	public Resource create(String id, String type) throws SpdxInvalidIdException {
+	protected Resource getOrCreate(String id, String type) throws SpdxInvalidIdException {
 		Objects.requireNonNull(id, "Missing required ID");
 		Objects.requireNonNull(type, "Missing required type");
 		Resource rdfType = SpdxResourceFactory.typeToResource(type);
@@ -536,15 +581,43 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		Objects.requireNonNull(value, "Missing required value");
 		model.enterCriticalSection(false);
 		try {
-			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
-			Resource idResource = idToResource(id);
-			idResource.removeAll(property);
-			idResource.addProperty(property, valueToNode(value));
+			if (SpdxConstants.PROP_DOCUMENT_NAMESPACE.equals(propertyName)) {
+				// this is the namespace for the model itself
+				setDefaultNsPrefix(value);
+			} else {
+				Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
+				Resource idResource = idToResource(id);
+				idResource.removeAll(property);
+				idResource.addProperty(property, valueToNode(value));
+			}
 		} finally {
 			model.leaveCriticalSection();
 		}
 	}
 	
+	/**
+	 * Sets the default namespace prefix for the model
+	 * @param uri
+	 * @throws SpdxRdfException 
+	 */
+	private void setDefaultNsPrefix(Object oUri) throws SpdxRdfException {
+		Objects.requireNonNull(oUri, "Can not set NS prefix to null");
+		if (oUri instanceof URI) {
+			model.setNsPrefix("", ((URI)oUri).toString());
+		} else if (oUri instanceof String) {
+			try {
+				URI uri = new URI((String)oUri);
+				model.setNsPrefix("", uri.toString());
+			} catch (Exception ex) {
+				logger.error("Invalid URI provided for model default namespace.", ex);
+				throw new SpdxRdfException("Invalid URI provided for model default namespace.", ex);
+			}
+		} else {
+			logger.error("Invalid type for URI provided for model default namespace: "+oUri.getClass().toString());
+			throw new SpdxRdfException("Invalid type for URI provided for model default namespace: "+oUri.getClass().toString());			
+		}
+	}
+
 	/**
 	 * Converts a to an RDFNode based on the object type
 	 * @param value
@@ -557,7 +630,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			return model.createTypedLiteral(value);
 		} else if (value instanceof TypedValue) {
 			TypedValue tv = (TypedValue)value;
-			return create(tv.getId(), tv.getType());
+			return getOrCreate(tv.getId(), tv.getType());
 		} else if (value instanceof IndividualUriValue) {
 			return model.createResource(((IndividualUriValue)value).getIndividualURI());
 		} else {
@@ -1096,7 +1169,6 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 * @throws InvalidSPDXAnalysisException
 	 */
 	public boolean isCollectionProperty(String id, String propertyName) throws InvalidSPDXAnalysisException {
-		// TODO Change implementation to read an RDF OWL document to determine type
 		Objects.requireNonNull(id, "Missing required ID");
 		Objects.requireNonNull(propertyName, "Missing required property name");
 		model.enterCriticalSection(false);
@@ -1137,5 +1209,28 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	@Override
 	public void unlock() {
 		this.model.leaveCriticalSection();
+	}
+
+	public void serialize(OutputStream stream, OutputFormat outputFormat) {
+		this.model.write(stream, outputFormat.getType());
+	}
+
+	/**
+	 * Translate a case insensitive ID into a case sensitive ID
+	 * @param caseInsensisitiveId
+	 * @return case sensitive ID
+	 */
+	public Optional<String> getCasesensitiveId(String caseInsensisitiveId) {
+		return Optional.ofNullable(this.idCaseSensitiveMap.get(caseInsensisitiveId.toLowerCase()));
+	}
+
+	/**
+	 * Delete the entire resource and all statements
+	 * @param id
+	 * @throws SpdxInvalidIdException 
+	 */
+	public void delete(String id) throws SpdxInvalidIdException {
+		Resource idResource = idToResource(id);
+		model.removeAll(idResource, null, null);
 	}
 }

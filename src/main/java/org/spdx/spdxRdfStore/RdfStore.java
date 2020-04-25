@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.SpdxConstants;
+import org.spdx.library.model.DuplicateSpdxIdException;
 import org.spdx.library.model.SpdxIdNotFoundException;
 import org.spdx.library.model.TypedValue;
 import org.spdx.library.model.license.LicenseInfoFactory;
@@ -67,6 +68,24 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	private static final Set<String> LITERAL_VALUE_SET = new HashSet<String>(Arrays.asList(SpdxConstants.LITERAL_VALUES));
 
 	Map<String, RdfSpdxDocumentModelManager> documentUriModelMap = new ConcurrentHashMap<>();
+	
+	private OutputFormat outputFormat = OutputFormat.XML_ABBREV;
+
+	
+
+	/**
+	 * @return the outputFormat
+	 */
+	public OutputFormat getOutputFormat() {
+		return outputFormat;
+	}
+
+	/**
+	 * @param outputFormat the outputFormat to set
+	 */
+	public void setOutputFormat(OutputFormat outputFormat) {
+		this.outputFormat = outputFormat;
+	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#exists(java.lang.String, java.lang.String)
@@ -129,7 +148,10 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 				modelManager = previousModel;
 			}
 		}
-		modelManager.create(id, type);
+		if (modelManager.getCasesensitiveId(id).isPresent()) {
+			throw new DuplicateSpdxIdException("Id "+id+" already exists.");
+		}
+		modelManager.getOrCreate(id, type);
 	}
 
 	/* (non-Javadoc)
@@ -478,7 +500,12 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 
 	@Override
 	public void serialize(String documentUri, OutputStream stream) throws InvalidSPDXAnalysisException, IOException {
-		throw new RuntimeException("Not implemented");
+		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
+		if (Objects.isNull(modelManager)) {
+			logger.error("The document "+documentUri+" does not exist.");
+			throw new InvalidSPDXAnalysisException("The document "+documentUri+" does not exist.");
+		}
+		modelManager.serialize(stream, outputFormat);
 	}
 
 	@Override
@@ -498,5 +525,14 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 			}
 		}
 		return documentNamespace;
+	}
+
+	@Override
+	public Optional<String> getCaseSensisitiveId(String documentUri, String caseInsensisitiveId) {
+		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
+		if (Objects.isNull(modelManager)) {
+			return Optional.empty();
+		}
+		return modelManager.getCasesensitiveId(caseInsensisitiveId);
 	}
 }
