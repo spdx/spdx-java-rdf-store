@@ -60,8 +60,9 @@ public class CompatibilityUpgrader {
 	static {
 		Map<String, Map<String, String>> mutableTypePropertyMap = new HashMap<>();
 		Map<String, String> documentMap = new HashMap<>();
-		documentMap.put(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_VERSION, 
-				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_SPDX_VERSION);
+		//TODO: In 3.0, uncomment those below to change the spec versions
+//		documentMap.put(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_VERSION, 
+//				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_SPEC_VERSION);
 		mutableTypePropertyMap.put(SpdxConstants.CLASS_SPDX_DOCUMENT, Collections.unmodifiableMap(documentMap));
 		
 		TYPE_PROPERTY_MAP = Collections.unmodifiableMap(mutableTypePropertyMap);

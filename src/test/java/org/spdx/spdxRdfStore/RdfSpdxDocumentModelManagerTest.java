@@ -217,6 +217,19 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_VALUE_PROPERTIES[0]).isPresent());
 	}
 	
+	public void testRenamedProperty() throws InvalidSPDXAnalysisException {
+		Model model = ModelFactory.createDefaultModel();
+		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_SPDX_DOCUMENT);
+		String value = "2.1.2";
+		store.setValue(TEST_ID1, SpdxConstants.PROP_SPDX_SPEC_VERSION, value);
+		assertEquals(value, store.getPropertyValue(TEST_ID1, SpdxConstants.PROP_SPDX_SPEC_VERSION).get());
+		assertEquals(value, store.getPropertyValue(TEST_ID1, SpdxConstants.PROP_SPDX_VERSION).get());
+		List<String> allValues = store.getPropertyValueNames(TEST_ID1);
+		assertEquals(1, allValues.size());
+		assertEquals(SpdxConstants.PROP_SPDX_SPEC_VERSION, allValues.get(0));
+	}
+	
 	public void testGetNextId() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
 		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);

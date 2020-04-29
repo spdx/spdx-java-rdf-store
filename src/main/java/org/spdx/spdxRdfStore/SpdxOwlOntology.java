@@ -54,7 +54,7 @@ public class SpdxOwlOntology {
 	
 	static SpdxOwlOntology myself = null;
 	
-	static final String ONTOLOGY_PATH = "/resources/spdx-2-2-revision-10-onotology.owl.xml";
+	static final String ONTOLOGY_PATH = "/resources/spdx-2-2-revision-11-onotology.owl.xml";
 	
 	private OntModel model;
 	
@@ -93,6 +93,20 @@ public class SpdxOwlOntology {
 		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "boolean", Boolean.class);
 		DATA_TYPE_TO_CLASS = Collections.unmodifiableMap(dataTypeMap);
 	}
+	
+	/**
+	 * Map of the properties renamed due to spec inconsistencies between the RDF format and other formats
+	 */
+	public static final Map<String, String> RENAMED_PROPERTY_TO_OWL_PROPERTY;
+	public static final Map<String, String> OWL_PROPERTY_TO_RENAMED_PROPERTY;
+	static {
+		Map<String, String> renamedToOwl = new HashMap<>();
+		Map<String, String> owlToRenamed = new HashMap<>();
+		renamedToOwl.put(SpdxConstants.PROP_SPDX_SPEC_VERSION, SpdxConstants.PROP_SPDX_VERSION);
+		owlToRenamed.put(SpdxConstants.PROP_SPDX_VERSION, SpdxConstants.PROP_SPDX_SPEC_VERSION);
+		RENAMED_PROPERTY_TO_OWL_PROPERTY = Collections.unmodifiableMap(renamedToOwl);
+		OWL_PROPERTY_TO_RENAMED_PROPERTY = Collections.unmodifiableMap(owlToRenamed);
+	}
 
 	
 	public static synchronized SpdxOwlOntology getSpdxOwlOntology() {
@@ -128,6 +142,36 @@ public class SpdxOwlOntology {
 	}
 	
 	/**
+	 * Checks to see if a property name has been renamed from the OWL property name and returns the OWL compliant name
+	 * @param renamedPropertyUri
+	 * @return
+	 */
+	public static String checkGetOwlUriFromRenamed(String renamedPropertyUri) {
+		if (renamedPropertyUri.startsWith(SpdxConstants.SPDX_NAMESPACE) && 
+				RENAMED_PROPERTY_TO_OWL_PROPERTY.containsKey(renamedPropertyUri.substring(SpdxConstants.SPDX_NAMESPACE.length()))) {
+			return SpdxConstants.SPDX_NAMESPACE + 
+					RENAMED_PROPERTY_TO_OWL_PROPERTY.get(renamedPropertyUri.substring(SpdxConstants.SPDX_NAMESPACE.length()));
+		} else {
+			return renamedPropertyUri;
+		}
+	}
+	
+	/**
+	 * Checks to see if a property name has been renamed from the OWL property URI and returns the renamed URI
+	 * @param owlPropertyUri
+	 * @return
+	 */
+	public static String checkGetRenamedUri(String owlPropertyUri) {
+		if (owlPropertyUri.startsWith(SpdxConstants.SPDX_NAMESPACE) && 
+				OWL_PROPERTY_TO_RENAMED_PROPERTY.containsKey(owlPropertyUri.substring(SpdxConstants.SPDX_NAMESPACE.length()))) {
+			return SpdxConstants.SPDX_NAMESPACE + 
+					OWL_PROPERTY_TO_RENAMED_PROPERTY.get(owlPropertyUri.substring(SpdxConstants.SPDX_NAMESPACE.length()));
+		} else {
+			return owlPropertyUri;
+		}
+	}
+	
+	/**
 	 * Search the ontology range for a property and return the Java class that best matches the property type
 	 * @param p property to search for the class range
 	 * @return
@@ -136,7 +180,9 @@ public class SpdxOwlOntology {
 		if (!p.isURIResource()) {
 			return Optional.empty();
 		}
-		DatatypeProperty dataProperty = this.model.getDatatypeProperty(p.getURI());
+		String propertyUri = checkGetOwlUriFromRenamed(p.getURI());
+		
+		DatatypeProperty dataProperty = this.model.getDatatypeProperty(propertyUri);
 		if (Objects.isNull(dataProperty)) {
 			return Optional.empty();
 		}
@@ -177,7 +223,7 @@ public class SpdxOwlOntology {
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
 			}
 		}
-		OntProperty property = model.getOntProperty(propertyUri);
+		OntProperty property = model.getOntProperty(checkGetOwlUriFromRenamed(propertyUri));
 		if (Objects.isNull(property)) {
 			logger.error(propertyUri + " is not an SPDX property");
 			throw new MissingDataTypeAndClassRestriction(propertyUri + " is not an SPDX property");
@@ -211,7 +257,7 @@ public class SpdxOwlOntology {
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
 			}
 		}
-		OntProperty property = model.getOntProperty(propertyUri);
+		OntProperty property = model.getOntProperty(checkGetOwlUriFromRenamed(propertyUri));
 		if (Objects.isNull(property)) {
 			logger.error(propertyUri + " is not an SPDX property");
 			throw new SpdxRdfException(propertyUri + " is not an SPDX property");
@@ -245,7 +291,7 @@ public class SpdxOwlOntology {
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
 			}
 		}
-		OntProperty property = model.getOntProperty(propertyUri);
+		OntProperty property = model.getOntProperty(checkGetOwlUriFromRenamed(propertyUri));
 		if (Objects.isNull(property)) {
 			logger.error(propertyUri + " is not an SPDX property");
 			throw new SpdxRdfException(propertyUri + " is not an SPDX property");

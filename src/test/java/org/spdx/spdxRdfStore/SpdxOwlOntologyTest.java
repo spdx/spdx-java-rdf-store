@@ -91,4 +91,14 @@ public class SpdxOwlOntologyTest extends TestCase {
 			model.createProperty(SpdxConstants.RDF_POINTER_NAMESPACE + SpdxConstants.PROP_POINTER_OFFSET));
 	assertEquals(Optional.of(Integer.class), dataClass);
 	}
+	 
+	public void testCheckGetOwlUriFromRenamed() {
+		assertEquals(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_VERSION, 
+				SpdxOwlOntology.checkGetOwlUriFromRenamed(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_SPEC_VERSION));
+	}
+	
+	public void testCheckGetRenamedUri() {
+		assertEquals(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_SPEC_VERSION, 
+				SpdxOwlOntology.checkGetRenamedUri(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_VERSION));
+	}
 }

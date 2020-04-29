@@ -565,7 +565,12 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			logger.error("Attempting to convert an literal node to a property name: "+node.toString());
 			throw new SpdxRdfException("Can not convert a literal node into a property name.");
 		}
-		return node.asResource().getLocalName();
+		String localName = node.asResource().getLocalName();
+		if (SpdxOwlOntology.OWL_PROPERTY_TO_RENAMED_PROPERTY.containsKey(localName)) {
+			return SpdxOwlOntology.OWL_PROPERTY_TO_RENAMED_PROPERTY.get(localName);
+		} else {
+			return node.asResource().getLocalName();
+		}
 	}
 
 	/**

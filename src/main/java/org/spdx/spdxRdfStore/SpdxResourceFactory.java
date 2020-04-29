@@ -111,7 +111,7 @@ public class SpdxResourceFactory {
 		} else if (POINTER_PROPERTIES.contains(propertyName)) {
 			return SpdxConstants.RDF_POINTER_NAMESPACE + propertyName;
 		} else {
-			return SpdxConstants.SPDX_NAMESPACE + propertyName; 
+			return SpdxOwlOntology.checkGetOwlUriFromRenamed(SpdxConstants.SPDX_NAMESPACE + propertyName); 
 		}
 	}
 
