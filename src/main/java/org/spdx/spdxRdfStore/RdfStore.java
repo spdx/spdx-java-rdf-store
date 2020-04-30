@@ -142,6 +142,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 			Model model = ModelFactory.createDefaultModel();
 			model.getGraph().getPrefixMapping().setNsPrefix("spdx", SpdxConstants.SPDX_NAMESPACE);
 			model.getGraph().getPrefixMapping().setNsPrefix("doap", SpdxConstants.DOAP_NAMESPACE);
+			model.getGraph().getPrefixMapping().setNsPrefix("ptr", SpdxConstants.RDF_POINTER_NAMESPACE);
 			modelManager = new RdfSpdxDocumentModelManager(documentUri, model);
 			RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentUri, modelManager);
 			if (!Objects.isNull(previousModel))  {
