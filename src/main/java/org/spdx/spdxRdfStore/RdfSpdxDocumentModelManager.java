@@ -1238,4 +1238,36 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		Resource idResource = idToResource(id);
 		model.removeAll(idResource, null, null);
 	}
+
+	/**
+	 * @param id
+	 * @return Type typed value for the ID if it exists and is of an SPDX type, otherwise empty
+	 * @throws InvalidSPDXAnalysisException
+	 */
+	public Optional<TypedValue> getTypedValue(String id) throws InvalidSPDXAnalysisException {
+		Objects.requireNonNull(id, "Missing required ID");
+		model.enterCriticalSection(false);
+		try {
+			try {
+				Resource idResource = idToResource(id);
+				Resource idClass = idToClass(idResource);
+				if (Objects.isNull(idClass)) {
+					return Optional.empty();
+				}
+				Class<?> clazz = SpdxModelFactory.classUriToClass(idClass.getURI());
+				if (Objects.isNull(clazz)) {
+					return Optional.empty();
+				}
+				String type = SpdxModelFactory.SPDX_CLASS_TO_TYPE.get(clazz);
+				if (Objects.isNull(type)) {
+					return Optional.empty();
+				}
+				return Optional.of(new TypedValue(id, type));
+			} catch(SpdxInvalidIdException ex) {
+				return Optional.empty();
+			}
+		} finally {
+			model.leaveCriticalSection();
+		}	
+	}
 }

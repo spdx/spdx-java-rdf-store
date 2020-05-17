@@ -536,4 +536,14 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		}
 		return modelManager.getCasesensitiveId(caseInsensisitiveId);
 	}
+
+	@Override
+	public Optional<TypedValue> getTypedValue(String documentUri, String id) throws InvalidSPDXAnalysisException {
+		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
+		if (Objects.isNull(modelManager)) {
+			return Optional.empty();
+		} else {
+			return modelManager.getTypedValue(id);
+		}
+	}
 }

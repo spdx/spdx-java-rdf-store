@@ -589,4 +589,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertFalse(store.getCasesensitiveId(spdxId).isPresent());
 	}
 
+	public void testGetTypedValue() throws InvalidSPDXAnalysisException {
+		Model model = ModelFactory.createDefaultModel();
+		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_SPDX_CREATION_INFO);
+		Optional<TypedValue> result = store.getTypedValue(TEST_ID1);
+		assertTrue(result.isPresent());
+		assertEquals(TEST_ID1, result.get().getId());
+		assertEquals(SpdxConstants.CLASS_SPDX_CREATION_INFO, result.get().getType());
+	}
 }
