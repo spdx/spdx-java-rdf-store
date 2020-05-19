@@ -56,7 +56,9 @@ public class SpdxOwlOntologyTest extends TestCase {
 			if (!SpdxConstants.CLASS_NONE_LICENSE.equals(className) && 
 					!SpdxConstants.CLASS_NOASSERTION_LICENSE.equals(className) && 
 					!SpdxConstants.CLASS_EXTERNAL_SPDX_ELEMENT.equals(className) &&
-					!SpdxConstants.CLASS_EXTERNAL_EXTRACTED_LICENSE.equals(className)) {
+					!SpdxConstants.CLASS_EXTERNAL_EXTRACTED_LICENSE.equals(className) &&
+					!SpdxConstants.CLASS_SPDX_NONE_ELEMENT.equals(className) &&
+					!SpdxConstants.CLASS_SPDX_NOASSERTION_ELEMENT.equals(className)) {
 				assertNotNull(className+" not present in ontology.",SpdxOwlOntology.getSpdxOwlOntology().getModel().getOntClass(
 						SpdxResourceFactory.classNameToUri(className)));
 			}
