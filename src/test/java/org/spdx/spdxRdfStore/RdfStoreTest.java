@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.spdx.library.InvalidSPDXAnalysisException;
@@ -87,10 +88,10 @@ public class RdfStoreTest extends TestCase {
 		resultList.add(new TypedValue(ID_2, SpdxConstants.CLASS_SPDX_FILE));
 		resultList.add(new TypedValue(ID_3, SpdxConstants.CLASS_SPDX_FILE));
 		resultList.add(new TypedValue(ID_4, SpdxConstants.CLASS_SPDX_FILE));
-		result.forEach((TypedValue tv) -> {
+		for (TypedValue tv:result.collect(Collectors.toList())) {
 			assertTrue(resultList.contains(tv));
 			resultList.remove(tv);
-		});
+		}
 		assertEquals(0, resultList.size());
 	}
 

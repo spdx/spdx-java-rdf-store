@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -262,26 +263,26 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		store.getOrCreate(TEST_ID2, SpdxConstants.CLASS_ANNOTATION);
 		assertFalse(store.getPropertyValue(TEST_ID1, TEST_LIST_PROPERTIES[0]).isPresent());
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_LIST_PROPERTIES[0]).isPresent());
-		TEST_LIST_PROPERTY_VALUES[0].forEach(e -> {
+		for (Object e:TEST_LIST_PROPERTY_VALUES[0]) {
 			try {
 				store.addValueToCollection(TEST_ID1, TEST_LIST_PROPERTIES[0], e);
 				store.addValueToCollection(TEST_ID2, TEST_LIST_PROPERTIES[0], e);
 			} catch (InvalidSPDXAnalysisException e1) {
 				fail(e1.getMessage());
 			}
-		});
+		}
 
 		assertCollectionsEquals(TEST_LIST_PROPERTY_VALUES[0], toList(store.getValueList(TEST_ID1, TEST_LIST_PROPERTIES[0])));
 		assertCollectionsEquals(TEST_LIST_PROPERTY_VALUES[0], toList(store.getValueList(TEST_ID2, TEST_LIST_PROPERTIES[0])));
 		store.removeProperty(TEST_ID1, TEST_LIST_PROPERTIES[0]);
 		assertFalse(store.getPropertyValue(TEST_ID1, TEST_LIST_PROPERTIES[0]).isPresent());
-		TEST_LIST_PROPERTY_VALUES[0].forEach(e -> {
+		for (Object e:TEST_LIST_PROPERTY_VALUES[0]) {
 			try {
 				store.addValueToCollection(TEST_ID2, TEST_LIST_PROPERTIES[0], e);
 			} catch (InvalidSPDXAnalysisException e1) {
 				fail(e1.getMessage());
 			}
-		});
+		}
 	}
 	
 	private void assertCollectionsEquals(Object c1, Object c2) {
@@ -324,10 +325,10 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 				(TypedValue)TEST_LIST_PROPERTY_VALUES[2].get(0),
 				(TypedValue)TEST_LIST_PROPERTY_VALUES[2].get(1)
 		}));
-		store.getAllItems(null).forEach((TypedValue action) -> {
-			assertTrue(expected.contains(action));
-			expected.remove(action);
-		});
+		for (Object item:store.getAllItems(null).collect(Collectors.toList())) {
+			assertTrue(expected.contains(item));
+			expected.remove(item);
+		}
 		assertEquals(0, expected.size());
 		
 		// filtered
@@ -335,10 +336,10 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 				new TypedValue(TEST_ID1, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO),
 				new TypedValue(TEST_ID2, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO)
 		}));
-		store.getAllItems(SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO).forEach((TypedValue action) -> {
-			assertTrue(newexpected.contains(action));
-			newexpected.remove(action);
-		});
+		for (Object item: store.getAllItems(SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO).collect(Collectors.toList())) {
+			assertTrue(newexpected.contains(item));
+			newexpected.remove(item);
+		}
 		assertEquals(0, newexpected.size());
 	}
 
