@@ -546,4 +546,18 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 			return modelManager.getTypedValue(id);
 		}
 	}
+
+	@Override
+	public void delete(String documentUri, String id) throws InvalidSPDXAnalysisException {
+		Objects.requireNonNull(documentUri, "Missing required document URI");
+		Objects.requireNonNull(id, "Missing required ID");
+		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
+		if (Objects.isNull(modelManager)) {
+			throw new SpdxIdNotFoundException("Can not delete - document URI "+documentUri+" does not exist");
+		}
+		if (!modelManager.getCasesensitiveId(id).isPresent()) {
+			throw new SpdxIdNotFoundException("Can not delete - element ID "+id+" does not exist");
+		}
+		modelManager.delete(id);
+	}
 }
