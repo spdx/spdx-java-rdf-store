@@ -94,6 +94,14 @@ public class RdfStoreTest extends TestCase {
 		}
 		assertEquals(0, resultList.size());
 	}
+	
+	public void testDelete() throws InvalidSPDXAnalysisException {
+		RdfStore rdfStore = new RdfStore();
+		SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT, null);
+		assertTrue(rdfStore.exists(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID));
+		rdfStore.delete(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID);
+		assertFalse(rdfStore.exists(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID));
+	}
 
 	/**
 	 * Test method for {@link org.spdx.spdxRdfStore.RdfStore#loadModelFromFile(java.lang.String, boolean)}.
