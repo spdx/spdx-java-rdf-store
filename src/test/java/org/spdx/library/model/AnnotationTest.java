@@ -21,16 +21,12 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
 import org.spdx.library.DefaultModelStore;
 import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.ModelCopyManager;
 import org.spdx.library.SpdxConstants;
 import org.spdx.library.model.enumerations.AnnotationType;
-import org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager;
 import org.spdx.spdxRdfStore.RdfStore;
-import org.spdx.storage.IModelStore;
 
 import junit.framework.TestCase;
 
