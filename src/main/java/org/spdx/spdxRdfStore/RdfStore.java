@@ -560,4 +560,17 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		}
 		modelManager.delete(id);
 	}
+
+	@Override
+	public void close() throws Exception {
+		Iterator<RdfSpdxDocumentModelManager> modelManagerIter = documentUriModelMap.values().iterator();
+		List<RdfSpdxDocumentModelManager> modelManagersToClose = new ArrayList<>();
+		while (modelManagerIter.hasNext()) {
+			modelManagersToClose.add(modelManagerIter.next());	// Make a copy to prevent collisions of closes
+		}
+		documentUriModelMap.clear();
+		for (RdfSpdxDocumentModelManager modelManager:modelManagersToClose) {
+			modelManager.close();
+		}
+	}
 }

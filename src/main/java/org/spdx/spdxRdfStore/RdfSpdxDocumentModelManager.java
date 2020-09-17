@@ -1200,11 +1200,6 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	public void close() {
 		this.model.unregister(nextIdListener);
 	}
-	
-	@Override
-	public void finalize() {
-		close();
-	}
 
 	public IModelStoreLock enterCriticalSection(boolean readLockRequested) {
 		this.model.enterCriticalSection(readLockRequested);
