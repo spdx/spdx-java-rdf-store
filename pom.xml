@@ -4,7 +4,7 @@
 
   <groupId>org.spdx</groupId>
   <artifactId>spdx-rdf-store</artifactId>
-  <version>0.0.3-SNAPSHOT</version>
+  <version>0.0.3</version>
   <packaging>jar</packaging>
 
   <name>spdx-rdf-store</name>
@@ -13,6 +13,27 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+  
+    <licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+	<developers>
+		<developer>
+			<id>goneall</id>
+			<name>Gary O'Neall</name>
+			<email>gary@sourceauditor.com</email>
+			<organization>SPDX</organization>
+			<organizationUrl>http://spdx.org</organizationUrl>
+		</developer>
+	</developers>
+	<organization>
+		<name>SPDX</name>
+		<url>http://spdx.org</url>
+	</organization>
 
   <dependencies>
     <dependency>
@@ -24,7 +45,7 @@
     <dependency>
     	<groupId>org.spdx</groupId>
     	<artifactId>java-spdx-library</artifactId>
-    	<version>0.0.3-SNAPSHOT</version>
+    	<version>0.0.3</version>
     </dependency>
     <dependency>
     	<groupId>org.apache.jena</groupId>
@@ -98,4 +119,5 @@
 			</plugin>
 		</plugins>
   </build>
+    <description>This Java library implements an RDF store implementing the SPDX Java Library Storage Interface using an underlying RDF store.</description>
 </project>
