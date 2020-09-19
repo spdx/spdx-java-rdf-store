@@ -20,5 +20,8 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
+        java-package: jdk
+    - name: inspect java env
+      run: set | grep JAVA
     - name: Build with Maven
       run: mvn -B package --file pom.xml
