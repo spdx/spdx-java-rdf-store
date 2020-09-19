@@ -58,20 +58,41 @@ public class RdfStoreTest extends TestCase {
 
 	/**
 	 * Test method for {@link org.spdx.spdxRdfStore.RdfStore#getDocumentUris()}.
-	 * @throws InvalidSPDXAnalysisException 
+	 * @throws Exception 
 	 */
-	public void testGetDocumentUris() throws InvalidSPDXAnalysisException {
-		RdfStore rdfStore = new RdfStore();
-		rdfStore.create(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-		rdfStore.create(DOCUMENT_URI2, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-		rdfStore.create(DOCUMENT_URI3, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-		rdfStore.create(DOCUMENT_URI4, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-		List<String> result = rdfStore.getDocumentUris();
-		assertEquals(4, result.size());
-		assertTrue(result.contains(DOCUMENT_URI1));
-		assertTrue(result.contains(DOCUMENT_URI2));
-		assertTrue(result.contains(DOCUMENT_URI3));
-		assertTrue(result.contains(DOCUMENT_URI4));
+	public void testGetDocumentUris() throws Exception {
+		try (RdfStore rdfStore = new RdfStore()) {
+			rdfStore.create(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
+			rdfStore.create(DOCUMENT_URI2, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
+			rdfStore.create(DOCUMENT_URI3, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
+			rdfStore.create(DOCUMENT_URI4, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
+			List<String> result = rdfStore.getDocumentUris();
+			assertEquals(4, result.size());
+			assertTrue(result.contains(DOCUMENT_URI1));
+			assertTrue(result.contains(DOCUMENT_URI2));
+			assertTrue(result.contains(DOCUMENT_URI3));
+			assertTrue(result.contains(DOCUMENT_URI4));
+		}
+	}
+	
+	public void testClose() throws Exception {
+		RdfStore rdfStore = null;
+		try {
+			rdfStore = new RdfStore();
+			rdfStore.create(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
+			rdfStore.create(DOCUMENT_URI2, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
+			rdfStore.create(DOCUMENT_URI3, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
+			rdfStore.create(DOCUMENT_URI4, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
+			List<String> result = rdfStore.getDocumentUris();
+			assertEquals(4, result.size());
+			assertTrue(result.contains(DOCUMENT_URI1));
+			assertTrue(result.contains(DOCUMENT_URI2));
+			assertTrue(result.contains(DOCUMENT_URI3));
+			assertTrue(result.contains(DOCUMENT_URI4));
+		} finally {
+			rdfStore.close();
+		}
+		assertEquals(0, rdfStore.documentUriModelMap.size());
 	}
 
 	/**

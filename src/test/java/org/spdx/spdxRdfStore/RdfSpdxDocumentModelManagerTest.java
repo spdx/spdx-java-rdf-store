@@ -499,8 +499,8 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertFalse(store.isCollectionMembersAssignableTo(TEST_ID1, sProperty, TypedValue.class));
 		// Boolean
 		String bProperty = "boolprop";
-		store.addValueToCollection(TEST_ID1, bProperty, new Boolean(true));
-		store.addValueToCollection(TEST_ID1, bProperty, new Boolean(false));
+		store.addValueToCollection(TEST_ID1, bProperty, Boolean.valueOf(true));
+		store.addValueToCollection(TEST_ID1, bProperty, Boolean.valueOf(false));
 		assertFalse(store.isCollectionMembersAssignableTo(TEST_ID1, bProperty, String.class));
 		assertTrue(store.isCollectionMembersAssignableTo(TEST_ID1, bProperty, Boolean.class));
 		assertFalse(store.isCollectionMembersAssignableTo(TEST_ID1, bProperty, TypedValue.class));
@@ -513,7 +513,7 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		// Mixed
 		String mixedProperty = "mixedprop";
 		store.addValueToCollection(TEST_ID1, mixedProperty, new TypedValue(TEST_ID2, TEST_TYPE2));
-		store.addValueToCollection(TEST_ID1, mixedProperty, new Boolean(true));
+		store.addValueToCollection(TEST_ID1, mixedProperty, Boolean.valueOf(true));
 		store.addValueToCollection(TEST_ID1, mixedProperty, "mixed value");
 		assertFalse(store.isCollectionMembersAssignableTo(TEST_ID1, mixedProperty, String.class));
 		assertFalse(store.isCollectionMembersAssignableTo(TEST_ID1, mixedProperty, Boolean.class));
@@ -540,7 +540,7 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertFalse(store.isPropertyValueAssignableTo(TEST_ID1, sProperty, TypedValue.class));
 		// Boolean
 		String bProperty = "boolprop";
-		store.setValue(TEST_ID1, bProperty, new Boolean(true));
+		store.setValue(TEST_ID1, bProperty, Boolean.valueOf(true));
 		assertFalse(store.isPropertyValueAssignableTo(TEST_ID1, bProperty, String.class));
 		assertTrue(store.isPropertyValueAssignableTo(TEST_ID1, bProperty, Boolean.class));
 		assertFalse(store.isPropertyValueAssignableTo(TEST_ID1, bProperty, TypedValue.class));
