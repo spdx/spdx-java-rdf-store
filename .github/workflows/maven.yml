@@ -23,7 +23,5 @@ jobs:
         java-package: jdk
     - name: inspect java env
       run: set | grep JAVA
-      run: ls $JAVA_HOME/bin
-      run: ls $JAVA_HOME
     - name: Build with Maven
       run: mvn -B package --file pom.xml
