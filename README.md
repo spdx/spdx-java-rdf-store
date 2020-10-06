@@ -22,5 +22,3 @@ A convenience method `public String loadModelFromFile(String fileNameOrUrl, bool
 
 Mostly stable - although it has not been widely used.
 
-# Contributing
-
