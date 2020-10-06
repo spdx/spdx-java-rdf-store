@@ -1,16 +1,16 @@
 Contributing
 ============
-Thank you for your interest in `Spdx-Java-Rdf-Store`. The project is open-source software, and bug reports, suggestions, and most especially patches are welcome.
+Thank you for your interest in `spdx-java-rdf-store`. The project is open-source software, and bug reports, suggestions, and most especially patches are welcome.
 
 Issues
 ------
-`Spdx-Java-Rdf-Store` has a [project page on GitHub](https://github.com/spdx/Spdx-Java-Rdf-Store) where you can [create an issue](https://github.com/spdx/Spdx-Java-Rdf-Store/issues/new/choose) to report a bug, make a suggestion, or propose a substantial change or improvement that you might like to make. You may also wish to contact the SPDX working group technical team through its mailing list, [spdx-tech@lists.spdx.org](mailto:spdx-tech@lists.spdx.org).
+`spdx-java-rdf-store` has a [project page on GitHub](https://github.com/spdx/spdx-java-rdf-store) where you can [create an issue](https://github.com/spdx/spdx-java-rdf-store/issues) to report a bug, make a suggestion, or propose a substantial change or improvement that you might like to make. You may also wish to contact the SPDX working group technical team through its mailing list, [spdx-tech@lists.spdx.org](mailto:spdx-tech@lists.spdx.org).
 
 If you would like to work on a fix for any issue, please assign the issue to yourself prior to creating a Pull Request.
 
 Pull Requests
 -------
-The source code for `Spdx-Java-Rdf-Store` is hosted on [github.com/spdx/Spdx-Java-Rdf-Store](https://github.com/spdx/Spdx-Java-Rdf-Store). Please review [open pull requests](https://github.com/spdx/Spdx-Java-Rdf-Store/pulls) and [active branches](https://github.com/spdx/Spdx-Java-Rdf-Store/branches) before committing time to a substantial revision. Work along similar lines may already be in progress.
+The source code for `spdx-java-rdf-store` is hosted on [github.com/spdx/spdx-java-rdf-store](https://github.com/spdx/spdx-java-rdf-store). Please review [open pull requests](https://github.com/spdx/spdx-java-rdf-store/pulls) and [active branches](https://github.com/spdx/spdx-java-rdf-store/branches) before committing time to a substantial revision. Work along similar lines may already be in progress.
 
 To submit a pull request via GitHub, fork the repository, create a topic branch from `master` for your work, and send a pull request when ready. If you would prefer to send a patch or grant access to pull from your own Git repository, please contact the project's contributors by e-mail.
 
