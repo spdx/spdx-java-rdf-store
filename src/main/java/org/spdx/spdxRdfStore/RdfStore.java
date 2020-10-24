@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
+import org.apache.jena.query.ARQ;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.util.FileManager;
@@ -71,6 +72,9 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	
 	private OutputFormat outputFormat = OutputFormat.XML_ABBREV;
 
+	static {
+		ARQ.init();		// Insure ARQ is initialized
+	}
 	
 
 	/**

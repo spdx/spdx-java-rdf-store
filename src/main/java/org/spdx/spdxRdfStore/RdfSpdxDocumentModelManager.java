@@ -18,8 +18,12 @@
 package org.spdx.spdxRdfStore;
 
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -402,30 +406,29 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		} else {
 			// first try local to the document
 			resource = model.createResource(idToUriInDocument(id));
-			if (!model.containsResource(resource)) {
+			if (model.containsResource(resource)) {
+				// Confirm that there is a type
+				Statement statement = model.getProperty(resource, typeProperty);
+				if (statement == null || !statement.getObject().isResource()) {
+					logger.error("ID "+id+" does not have a type.");
+					throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
+				}
+				existingType = SpdxResourceFactory.resourceToSpdxType(statement.getObject().asResource());
+				if (!existingType.isPresent()) {
+					logger.error("ID "+id+" does not have a type.");
+					throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
+				}
+			} else {
 				// Try listed license URL
 				resource = model.createResource(idToListedLicenseUri(id));
 				if (!model.containsResource(resource)) {
-					if (ListedLicenses.getListedLicenses().isSpdxListedExceptionId(id)) {
-						existingType = Optional.of(SpdxResourceFactory.typeToResource(
-								SpdxConstants.CLASS_SPDX_LICENSE_EXCEPTION).getURI());
-						// add exception type
-//						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
-//								SpdxConstants.CLASS_SPDX_LICENSE_EXCEPTION));
-					} else if (ListedLicenses.getListedLicenses().isSpdxListedLicenseId(id)) {
-						existingType = Optional.of(SpdxResourceFactory.typeToResource(
-								SpdxConstants.CLASS_SPDX_LISTED_LICENSE).getURI());
-						// add listed license type
-//						resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
-//								SpdxConstants.CLASS_SPDX_LISTED_LICENSE));
-					} else
+					// Check for listed license ID's - these URI's may not be defined in the local model
+					
+					if (!ListedLicenses.getListedLicenses().isSpdxListedExceptionId(id) && 
+							!ListedLicenses.getListedLicenses().isSpdxListedLicenseId(id)) {
+						// Try listed reference types
 						try {
-							if (ListedReferenceTypes.getListedReferenceTypes().isListedReferenceType(new URI(SpdxConstants.SPDX_LISTED_REFERENCE_TYPES_PREFIX + id))) {
-								existingType = Optional.of(SpdxResourceFactory.typeToResource(
-										SpdxConstants.CLASS_SPDX_REFERENCE_TYPE).getURI());
-//								resource.addProperty(typeProperty, SpdxResourceFactory.typeToResource(
-//										SpdxConstants.CLASS_SPDX_REFERENCE_TYPE));
-							} else {
+							if (!ListedReferenceTypes.getListedReferenceTypes().isListedReferenceType(new URI(SpdxConstants.SPDX_LISTED_REFERENCE_TYPES_PREFIX + id))) {
 								logger.error("ID "+id+" does not exist in the model.");
 								throw new SpdxInvalidIdException("ID "+id+" does not exist in the model.");
 							}
@@ -433,19 +436,8 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 							logger.error("ID "+id+" does not exist in the model.");
 							throw new SpdxInvalidIdException("ID "+id+" does not exist in the model.");
 						}
+					}
 				}
-			}
-		}
-		if (!existingType.isPresent()) {
-			Statement statement = model.getProperty(resource, typeProperty);
-			if (statement == null || !statement.getObject().isResource()) {
-				logger.error("ID "+id+" does not have a type.");
-				throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
-			}
-			existingType = SpdxResourceFactory.resourceToSpdxType(statement.getObject().asResource());
-			if (!existingType.isPresent()) {
-				logger.error("ID "+id+" does not have a type.");
-				throw new SpdxInvalidIdException("ID "+id+" does not have a type.");
 			}
 		}
 		return resource;
@@ -458,7 +450,12 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 * @return URI for the ID within the document
 	 */
 	private String idToUriInDocument(String id) {
-		return documentUri + "#" + id;
+		try {
+			return documentUri + "#" + URLEncoder.encode(id, StandardCharsets.UTF_8.name());
+		} catch (UnsupportedEncodingException e) {
+			// This should never happen
+			return documentUri + "#" + id;
+		}
 	}
 	
 	/**
@@ -730,17 +727,23 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			}
 		} else {
 			if (propertyValue.isURIResource()) {
-				// Assume this is an individual value
 				final String propertyUri = propertyValue.asResource().getURI();
-				IndividualUriValue iv = new IndividualUriValue() {
+				if (propertyUri.contains("://spdx.org/licenses/") && !propertyUri.endsWith(SpdxConstants.NONE_VALUE) && 
+						!propertyUri.endsWith(SpdxConstants.NOASSERTION_VALUE)) {
+					// Must be a listed license - Note that the URI may be http: or https:
+					return Optional.of(new TypedValue(resourceToId(propertyValue.asResource()), SpdxConstants.CLASS_SPDX_LISTED_LICENSE));
+				} else {
+					// Assume this is an individual value
+					IndividualUriValue iv = new IndividualUriValue() {
 
-					@Override
-					public String getIndividualURI() {
-						return propertyUri;
-					}
-					
-				};
-				return Optional.of(iv);
+						@Override
+						public String getIndividualURI() {
+							return propertyUri;
+						}
+						
+					};
+					return Optional.of(iv);
+				}
 			} else {
 				logger.error("Invalid resource type for value.  Must be a typed value, literal value or a URI Resource");
 				throw new SpdxRdfException("Invalid resource type for value.  Must be a typed value, literal value or a URI Resource");
@@ -758,7 +761,24 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		if (resource.isAnon()) {
 			return RdfStore.ANON_PREFIX + resource.getId();
 		} else if (resource.isURIResource()) {
-			return resource.getLocalName();
+			String retval;
+			if (resource.getURI().contains("%")) {
+				// there seems to be a bug in getLocalName() if the ID contains a %-encoding
+				if (resource.getURI().contains("#")) {
+					retval = resource.getURI().substring(resource.getURI().lastIndexOf('#')+1);
+				} else {
+					retval = resource.getURI().substring(resource.getURI().lastIndexOf('/')+1);
+				}
+			} else {
+				retval = resource.getLocalName();
+			}
+			try {
+				retval = URLDecoder.decode(retval, StandardCharsets.UTF_8.name());
+			} catch (UnsupportedEncodingException e) {
+				logger.error("Unexpected URL decoding error for: "+resource.toString());
+				throw new SpdxRdfException("Unexpected URL decoding error");
+			}
+			return retval;
 		} else {
 			logger.error("Attempting to convert unsupported resource type to an ID: "+resource.toString());
 			throw new SpdxRdfException("Only anonomous and URI resources can be converted to an ID");
