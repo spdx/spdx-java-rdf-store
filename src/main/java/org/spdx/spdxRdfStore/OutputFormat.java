@@ -24,11 +24,12 @@ package org.spdx.spdxRdfStore;
  * @author Gary O'Neall
  */
 public enum OutputFormat {
-	// outputFormat must be one of RDF/XML-ABBREV (default), RDF/XML, N-TRIPLET, or TURTLE
+	// outputFormat must be one of RDF/XML-ABBREV (default), RDF/XML, N-TRIPLET, TURTLE, JSON-LD
 	XML_ABBREV("RDF/XML-ABBREV"),
 	XML("RDF/XML"),
-	N_TRIPLET("N-TRIPLET"),
-	TURTLE("TURTLE");
+	N_TRIPLET("NTRIPLE"),
+	TURTLE("TURTLE"),
+	JSON_LD("JSON-LD");
 	
 	private String type;
 	private OutputFormat(String type) {
