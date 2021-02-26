@@ -4,7 +4,7 @@
 
   <groupId>org.spdx</groupId>
   <artifactId>spdx-rdf-store</artifactId>
-  <version>0.0.8-SNAPSHOT</version>
+  <version>1.0.0</version>
   <packaging>jar</packaging>
 
   <name>spdx-rdf-store</name>
@@ -35,10 +35,10 @@
 		<url>http://spdx.org</url>
 	</organization>
     <distributionManagement>
-      <repository>
-        <id>bintray-spdx-spdx-tools</id>
+	  <repository>
+        <id>ossrh</id>
         <name>spdx-spdx-tools</name>
-        <url>https://api.bintray.com/maven/spdx/spdx-tools/java-spdx-rdf-store/;publish=1</url>
+        <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
       </repository>
 	</distributionManagement>
 
@@ -251,8 +251,8 @@
     <description>This Java library implements an RDF store implementing the SPDX Java Library Storage Interface using an underlying RDF store.</description>
     <scm>
     	<url>https://github.com/spdx/spdx-java-rdf-store</url>
-    	<connection>https://</connection>
-    	<developerConnection>SPDX</developerConnection>
+    	<connection>scm:git:git://github.com/spdx/spdx-java-rdf-store</connection>
+    	<developerConnection>scm:git:git@github.com:/spdx/spdx-java-rdf-store</developerConnection>
     </scm>
     <issueManagement>
     	<system>Github</system>
