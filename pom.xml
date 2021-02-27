@@ -105,6 +105,11 @@
     	<artifactId>jena-base</artifactId>
     	<version>3.12.0</version>
     </dependency>
+    <dependency>
+    	<groupId>org.apache.jena</groupId>
+    	<artifactId>jena-tdb</artifactId>
+    	<version>3.12.0</version>
+    </dependency>
   </dependencies>
     <build>
   		<resources>

@@ -37,6 +37,8 @@ import java.util.stream.Stream;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ARQ;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.util.FileManager;
@@ -71,9 +73,19 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	Map<String, RdfSpdxDocumentModelManager> documentUriModelMap = new ConcurrentHashMap<>();
 	
 	private OutputFormat outputFormat = OutputFormat.XML_ABBREV;
+	
+	private Dataset dataset;
 
 	static {
 		ARQ.init();		// Insure ARQ is initialized
+	}
+	
+	public RdfStore() {
+	    dataset = DatasetFactory.create();
+	}
+	
+	public RdfStore(Dataset dataset) {
+	    this.dataset = dataset;
 	}
 	
 
@@ -143,7 +155,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		Objects.requireNonNull(type, "Missing required type");
 		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
 		if (Objects.isNull(modelManager)) {
-			Model model = ModelFactory.createDefaultModel();
+			Model model = dataset.getNamedModel(documentUri);
 			model.getGraph().getPrefixMapping().setNsPrefix("spdx", SpdxConstants.SPDX_NAMESPACE);
 			model.getGraph().getPrefixMapping().setNsPrefix("doap", SpdxConstants.DOAP_NAMESPACE);
 			model.getGraph().getPrefixMapping().setNsPrefix("ptr", SpdxConstants.RDF_POINTER_NAMESPACE);
@@ -218,7 +230,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		Objects.requireNonNull(idType, "Missing required ID type");
 		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
 		if (Objects.isNull(modelManager)) {
-			Model model = ModelFactory.createDefaultModel();
+			Model model = dataset.getNamedModel(documentUri);
 			model.getGraph().getPrefixMapping().setNsPrefix("spdx", SpdxConstants.SPDX_NAMESPACE);
 			model.getGraph().getPrefixMapping().setNsPrefix("doap", SpdxConstants.DOAP_NAMESPACE);
 			modelManager = new RdfSpdxDocumentModelManager(documentUri, model);
@@ -518,8 +530,10 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		Model model = ModelFactory.createDefaultModel();
 		model.read(stream, null);
 		String documentNamespace = getDocumentNamespace(model);
-		RdfSpdxDocumentModelManager modelManager = new RdfSpdxDocumentModelManager(documentNamespace, model);
 		CompatibilityUpgrader.upgrade(model);
+		dataset.addNamedModel(documentNamespace, model);
+		RdfSpdxDocumentModelManager modelManager = new RdfSpdxDocumentModelManager(documentNamespace, 
+		        dataset.getNamedModel(documentNamespace));
 		RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentNamespace, modelManager);
 		if (!Objects.isNull(previousModel))  {
 			if (overwrite) {

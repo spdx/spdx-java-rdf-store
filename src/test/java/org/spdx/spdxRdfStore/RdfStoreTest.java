@@ -5,12 +5,17 @@ package org.spdx.spdxRdfStore;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.tdb.TDBFactory;
 import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.SpdxConstants;
 import org.spdx.library.model.ExternalRef;
@@ -173,6 +178,34 @@ public class RdfStoreTest extends TestCase {
 		rdfStore.loadModelFromFile(TEST_FILE_NAME, true);
 		documentDescribes = doc.getDocumentDescribes();
 		assertEquals(2, documentDescribes.size());
+	}
+	
+	public void testTdb() throws InvalidSPDXAnalysisException, IOException {
+	    File tdbDir = Files.createTempDirectory("TDB").toFile();
+	    Dataset dataset = null;
+	    try {
+	        dataset = TDBFactory.createDataset(tdbDir.getAbsolutePath());
+	        RdfStore rdfStore = new RdfStore(dataset);
+	        SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT, null);
+	        SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, ID_2, SpdxConstants.CLASS_SPDX_FILE, null);
+	        SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, ID_3, SpdxConstants.CLASS_SPDX_FILE, null);
+	        SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, ID_4, SpdxConstants.CLASS_SPDX_FILE, null);
+	        Stream<TypedValue> result = rdfStore.getAllItems(DOCUMENT_URI1, SpdxConstants.CLASS_SPDX_FILE);
+	        final ArrayList<TypedValue> resultList = new ArrayList<>();
+	        resultList.add(new TypedValue(ID_2, SpdxConstants.CLASS_SPDX_FILE));
+	        resultList.add(new TypedValue(ID_3, SpdxConstants.CLASS_SPDX_FILE));
+	        resultList.add(new TypedValue(ID_4, SpdxConstants.CLASS_SPDX_FILE));
+	        for (TypedValue tv:result.collect(Collectors.toList())) {
+	            assertTrue(resultList.contains(tv));
+	            resultList.remove(tv);
+	        }
+	        assertEquals(0, resultList.size());
+	    } finally {
+	        if (dataset != null) {
+	            dataset.end();
+	        }
+	        FileUtils.deleteDirectory(tdbDir);
+	    }
 	}
 
 }
