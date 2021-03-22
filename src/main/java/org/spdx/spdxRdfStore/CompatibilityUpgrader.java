@@ -71,8 +71,9 @@ public class CompatibilityUpgrader {
 	/**
 	 * Upgrade the properties in the model to the current version of the spec
 	 * @param model
+	 * @param documentNamespace
 	 */
-	public static void upgrade(Model model) throws InvalidSPDXAnalysisException {
+	public static void upgrade(Model model, String documentNamespace) throws InvalidSPDXAnalysisException {
 		model.enterCriticalSection(false);
 		try {
 			// update type property names
@@ -98,9 +99,9 @@ public class CompatibilityUpgrader {
 					}
 				}
 			}
-			upgradeArtifactOf(model);
-			upgradeReviewers(model);
-			upgradeExternalDocumentRefs(model);
+			upgradeArtifactOf(model, documentNamespace);
+			upgradeReviewers(model, documentNamespace);
+			upgradeExternalDocumentRefs(model, documentNamespace);
 		} finally {
 			model.leaveCriticalSection();
 		}
@@ -109,10 +110,10 @@ public class CompatibilityUpgrader {
 	/**
 	 * Make sure all external document Ref's have a URI with proper ID rather than using the externalDocumentId property
 	 * @param model
+	 * @param documentNamespace
 	 * @throws InvalidSPDXAnalysisException 
 	 */
-	private static void upgradeExternalDocumentRefs(Model model) throws InvalidSPDXAnalysisException {
-		String documentNamespace = RdfStore.getDocumentNamespace(model);
+	private static void upgradeExternalDocumentRefs(Model model, String documentNamespace) throws InvalidSPDXAnalysisException {
 		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#externalDocumentId> ?o }";
 		QueryExecution qe = QueryExecutionFactory.create(query, model);
 		ResultSet result = qe.execSelect();
@@ -156,11 +157,12 @@ public class CompatibilityUpgrader {
 	/**
 	 * Upgrade the reviewers field to Annotations with a type reviewer
 	 * @param model
+	 * @param documentNamespace
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	@SuppressWarnings("deprecation")
-	private static void upgradeReviewers(Model model) throws InvalidSPDXAnalysisException {
-		Resource document = model.createResource(RdfStore.getDocumentNamespace(model) + "#" + SpdxConstants.SPDX_DOCUMENT_ID);
+	private static void upgradeReviewers(Model model, String documentNamespace) throws InvalidSPDXAnalysisException {
+		Resource document = model.createResource(documentNamespace  + "#" + SpdxConstants.SPDX_DOCUMENT_ID);
 		Property annotationProperty = model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_ANNOTATION);
 		Resource reviewerType = model.createResource(AnnotationType.REVIEW.getIndividualURI());
 		Property typeProperty = model.createProperty(RdfSpdxDocumentModelManager.RDF_TYPE);
@@ -225,10 +227,11 @@ public class CompatibilityUpgrader {
 	/**
 	 * Convert all artifactOf properties to relationships and remove the old properties and DOAP classes
 	 * @param model
+	 * @param documentNamespace the document Namespace
 	 * @throws InvalidSPDXAnalysisException 
 	 */
-	private static void upgradeArtifactOf(Model model) throws InvalidSPDXAnalysisException {
-		String docNamespace = RdfStore.getDocumentNamespace(model) + "#";
+	private static void upgradeArtifactOf(Model model, String documentNamespace) throws InvalidSPDXAnalysisException {
+		String docNamespace = documentNamespace + "#";
 		Set<String> addedDoapProjects = new HashSet<String>();	// prevent duplicates
 		List<Statement> statementsToRemove = new ArrayList<>();
 		Property artifactOfProperty = model.createProperty("http://spdx.org/rdf/terms#artifactOf");
