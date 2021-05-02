@@ -516,10 +516,10 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	@Override
 	public String deSerialize(InputStream stream, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
 		Model model = ModelFactory.createDefaultModel();
-		model.read(stream, null);
+		model.read(stream, null, this.outputFormat.getType());
 		String documentNamespace = getDocumentNamespace(model);
 		RdfSpdxDocumentModelManager modelManager = new RdfSpdxDocumentModelManager(documentNamespace, model);
-		CompatibilityUpgrader.upgrade(model);
+		CompatibilityUpgrader.upgrade(model, documentNamespace);
 		RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentNamespace, modelManager);
 		if (!Objects.isNull(previousModel))  {
 			if (overwrite) {
@@ -531,6 +531,32 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		}
 		return documentNamespace;
 	}
+	
+	
+    /**
+     * Deserialize an RDF stream without an enclosing document
+     * @param stream
+     * @param documentNamespace
+     * @return the documentNamespace
+     * @throws InvalidSPDXAnalysisException
+     * @throws IOException
+     */
+	public String deSerialize(InputStream stream, boolean overwrite, String documentNamespace) throws InvalidSPDXAnalysisException, IOException {
+        Model model = ModelFactory.createDefaultModel();
+        model.read(stream, null, this.outputFormat.getType());
+        RdfSpdxDocumentModelManager modelManager = new RdfSpdxDocumentModelManager(documentNamespace, model);
+        CompatibilityUpgrader.upgrade(model, documentNamespace);
+        RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentNamespace, modelManager);
+        if (!Objects.isNull(previousModel))  {
+            if (overwrite) {
+                logger.warn("Overwriting previous model from file for document URI "+documentNamespace);
+                documentUriModelMap.put(documentNamespace, modelManager);
+            } else {
+                throw new SpdxRdfException("Document "+documentNamespace+" is already open in the RDF Store");
+            }
+        }
+        return documentNamespace;
+    }
 
 	@Override
 	public Optional<String> getCaseSensisitiveId(String documentUri, String caseInsensisitiveId) {

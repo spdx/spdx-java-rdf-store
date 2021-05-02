@@ -54,7 +54,7 @@ public class SpdxOwlOntology {
 	
 	static SpdxOwlOntology myself = null;
 	
-	static final String ONTOLOGY_PATH = "/resources/spdx-2-2-revision-13-onotology.owl.xml";
+	static final String ONTOLOGY_PATH = "/resources/spdx-2-2-revision-14-onotology.owl.xml";
 	
 	private OntModel model;
 	
