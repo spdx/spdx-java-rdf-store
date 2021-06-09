@@ -441,9 +441,6 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 */
 	public String loadModelFromFile(String fileNameOrUrl, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
 		InputStream spdxRdfInput = FileManager.get().open(fileNameOrUrl);
-		if (Objects.isNull(spdxRdfInput)) {
-			throw new SpdxRdfException("File not found: "+fileNameOrUrl);
-		}
 		try {
 			return deSerialize(spdxRdfInput, overwrite);
 		} finally {

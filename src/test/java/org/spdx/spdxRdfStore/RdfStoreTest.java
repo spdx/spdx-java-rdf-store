@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -90,7 +91,9 @@ public class RdfStoreTest extends TestCase {
 			assertTrue(result.contains(DOCUMENT_URI3));
 			assertTrue(result.contains(DOCUMENT_URI4));
 		} finally {
-			rdfStore.close();
+		    if (Objects.nonNull(rdfStore)) {
+		        rdfStore.close();
+		    }
 		}
 		assertEquals(0, rdfStore.documentUriModelMap.size());
 	}
@@ -104,16 +107,17 @@ public class RdfStoreTest extends TestCase {
 		SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, ID_2, SpdxConstants.CLASS_SPDX_FILE, null);
 		SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, ID_3, SpdxConstants.CLASS_SPDX_FILE, null);
 		SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, ID_4, SpdxConstants.CLASS_SPDX_FILE, null);
-		Stream<TypedValue> result = rdfStore.getAllItems(DOCUMENT_URI1, SpdxConstants.CLASS_SPDX_FILE);
-		final ArrayList<TypedValue> resultList = new ArrayList<>();
-		resultList.add(new TypedValue(ID_2, SpdxConstants.CLASS_SPDX_FILE));
-		resultList.add(new TypedValue(ID_3, SpdxConstants.CLASS_SPDX_FILE));
-		resultList.add(new TypedValue(ID_4, SpdxConstants.CLASS_SPDX_FILE));
-		for (TypedValue tv:result.collect(Collectors.toList())) {
-			assertTrue(resultList.contains(tv));
-			resultList.remove(tv);
+		try (Stream<TypedValue> result = rdfStore.getAllItems(DOCUMENT_URI1, SpdxConstants.CLASS_SPDX_FILE)) {
+	        final ArrayList<TypedValue> resultList = new ArrayList<>();
+            resultList.add(new TypedValue(ID_2, SpdxConstants.CLASS_SPDX_FILE));
+            resultList.add(new TypedValue(ID_3, SpdxConstants.CLASS_SPDX_FILE));
+            resultList.add(new TypedValue(ID_4, SpdxConstants.CLASS_SPDX_FILE));
+            for (TypedValue tv:result.collect(Collectors.toList())) {
+                assertTrue(resultList.contains(tv));
+                resultList.remove(tv);
+            }
+            assertEquals(0, resultList.size());
 		}
-		assertEquals(0, resultList.size());
 	}
 	
 	public void testDelete() throws InvalidSPDXAnalysisException {

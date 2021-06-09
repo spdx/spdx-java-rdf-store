@@ -91,6 +91,7 @@ import org.spdx.storage.IModelStore.IModelStoreLock;
  *
  */
 public class RdfSpdxDocumentModelManager implements IModelStoreLock {
+    
 	
 	static final Logger logger = LoggerFactory.getLogger(RdfSpdxDocumentModelManager.class.getName());
 	
@@ -163,8 +164,6 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				}
 			}
 		}
-		
-		
 	}
 	
 	private ReadWriteLock counterLock = new ReentrantReadWriteLock();
@@ -838,7 +837,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 */
 	public Stream<TypedValue> getAllItems(@Nullable String typeFilter) {
 		String query = "SELECT ?s ?type  WHERE { ?s  <" + RDF_TYPE + ">  ?type }";
-		QueryExecution qe = QueryExecutionFactory.create(query, model);
+		final QueryExecution qe = QueryExecutionFactory.create(query, model);
 		ResultSet result = qe.execSelect();
 		Stream<QuerySolution> querySolutionStream = StreamSupport
 				.stream(Spliterators.spliteratorUnknownSize(result, Spliterator.ORDERED | Spliterator.NONNULL), false)
@@ -867,7 +866,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				logger.error("Unexpected exception converting to type");
 				throw new RuntimeException(e);
 			}
-		});
+		}).onClose(() -> {qe.close();});
 	}
 
 	/**
@@ -1090,9 +1089,6 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				RDFNode node = iter.next();
 				Optional<Object> value = valueNodeToObject(node, property);
 				if (value.isPresent() && !clazz.isAssignableFrom(value.get().getClass())) {
-					if (!value.isPresent()) {
-						return false;
-					}
 					if (value.get() instanceof TypedValue) {
 						try {
 							if (!clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)value.get()).getType()))) {
@@ -1165,21 +1161,21 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 						return false;
 					}
 				}
-			}
-			if (objectValue.get() instanceof IndividualUriValue) {
-				String uri = ((IndividualUriValue)objectValue.get()).getIndividualURI();
-				if (SpdxConstants.URI_VALUE_NOASSERTION.equals(uri)) {
-					return true;
-				}
-				if (SpdxConstants.URI_VALUE_NONE.equals(uri)) {
-					return true;
-				}
-				Enum<?> spdxEnum = SpdxEnumFactory.uriToEnum.get(uri);
-				if (Objects.nonNull(spdxEnum)) {
-					return clazz.isAssignableFrom(spdxEnum.getClass());
-				} else {
-					return false;
-				}
+				if (objectValue.get() instanceof IndividualUriValue) {
+	                String uri = ((IndividualUriValue)objectValue.get()).getIndividualURI();
+	                if (SpdxConstants.URI_VALUE_NOASSERTION.equals(uri)) {
+	                    return true;
+	                }
+	                if (SpdxConstants.URI_VALUE_NONE.equals(uri)) {
+	                    return true;
+	                }
+	                Enum<?> spdxEnum = SpdxEnumFactory.uriToEnum.get(uri);
+	                if (Objects.nonNull(spdxEnum)) {
+	                    return clazz.isAssignableFrom(spdxEnum.getClass());
+	                } else {
+	                    return false;
+	                }
+	            }
 			}
 			return false;
 		} finally {
