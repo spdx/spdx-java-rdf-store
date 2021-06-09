@@ -681,27 +681,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			return Optional.empty();
 		}
 		if (propertyValue.isLiteral()) {
-			Object retval = propertyValue.asLiteral().getValue();
-			if (retval instanceof String) {
-				// need to check type and convert to boolean or integer
-				Optional<Class<? extends Object>> propertyClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(property);
-				if (propertyClass.isPresent()) {
-					if (Integer.class.equals(propertyClass.get())) {
-						try {
-							retval = Integer.parseInt((String)retval);
-						} catch(NumberFormatException ex) {
-							throw new InvalidSPDXAnalysisException("Invalid integer format for property "+property.toString(), ex);
-						}
-					} else if (Boolean.class.equals(propertyClass.get())) {
-						try {
-							retval = Boolean.valueOf((String)retval);
-						} catch(Exception ex) {
-							throw new InvalidSPDXAnalysisException("Invalid boolean format for property "+property.toString(), ex);
-						}
-					}
-				}
-			}
-			return Optional.of(retval);
+		    return literalNodeToObject(propertyValue.asLiteral().getValue(), property);
 		}
 		Resource valueType = propertyValue.asResource().getPropertyResourceValue(RDF.type);
 		Optional<String> sValueType;
@@ -749,7 +729,43 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			}
 		}
 	}
-/**
+	
+    /**
+     * Translate a literal node to an object based on the property and literal value type
+     * @param literalValue node value for the literal
+     * @param property property associated with the literal value
+     * @return the object associated with the literal value
+     * @throws InvalidSPDXAnalysisException
+     */
+    private Optional<Object> literalNodeToObject(Object literalValue, Property property) throws InvalidSPDXAnalysisException {
+        if (literalValue instanceof String) {
+            // need to check type and convert to boolean or integer
+            Optional<Class<? extends Object>> propertyClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(property);
+            if (propertyClass.isPresent()) {
+                if (Integer.class.equals(propertyClass.get())) {
+                    try {
+                        return Optional.of(Integer.parseInt((String)literalValue));
+                    } catch(NumberFormatException ex) {
+                        throw new InvalidSPDXAnalysisException("Invalid integer format for property "+property.toString(), ex);
+                    }
+                } else if (Boolean.class.equals(propertyClass.get())) {
+                    try {
+                        return Optional.of(Boolean.valueOf((String)literalValue));
+                    } catch(Exception ex) {
+                        throw new InvalidSPDXAnalysisException("Invalid boolean format for property "+property.toString(), ex);
+                    }
+                } else {
+                    return Optional.of(literalValue);
+                }
+            } else {
+                return Optional.of(literalValue);
+            }
+        } else {
+            return Optional.of(literalValue);
+        }
+    }
+
+    /**
 	 * Obtain an ID from a resource
 	 * @param resource
 	 * @return ID formatted appropriately for use outside the RdfStore
