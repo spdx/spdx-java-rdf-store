@@ -2,6 +2,10 @@
 
 This Java library implements an RDF store implementing the [SPDX Java Library Storage Interface](https://github.com/spdx/Spdx-Java-Library#storage-interface) using an underlying RDF store.
 
+# Code quality badges
+
+|   [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=spdx-rdf-store&metric=bugs)](https://sonarcloud.io/dashboard?id=spdx-rdf-store)    | [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=spdx-rdf-store&metric=security_rating)](https://sonarcloud.io/dashboard?id=spdx-rdf-store) | [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=spdx-rdf-store&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=spdx-rdf-store) | [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=spdx-rdf-store&metric=sqale_index)](https://sonarcloud.io/dashboard?id=spdx-rdf-store) |
+
 # Using the Library
 
 This library is intended to be used in conjunction with the [SPDX Java Library](https://github.com/spdx/Spdx-Java-Library).
