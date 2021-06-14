@@ -91,6 +91,7 @@ import org.spdx.storage.IModelStore.IModelStoreLock;
  *
  */
 public class RdfSpdxDocumentModelManager implements IModelStoreLock {
+    
 	
 	static final Logger logger = LoggerFactory.getLogger(RdfSpdxDocumentModelManager.class.getName());
 	
@@ -163,8 +164,6 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				}
 			}
 		}
-		
-		
 	}
 	
 	private ReadWriteLock counterLock = new ReentrantReadWriteLock();
@@ -682,27 +681,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			return Optional.empty();
 		}
 		if (propertyValue.isLiteral()) {
-			Object retval = propertyValue.asLiteral().getValue();
-			if (retval instanceof String) {
-				// need to check type and convert to boolean or integer
-				Optional<Class<? extends Object>> propertyClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(property);
-				if (propertyClass.isPresent()) {
-					if (Integer.class.equals(propertyClass.get())) {
-						try {
-							retval = Integer.parseInt((String)retval);
-						} catch(NumberFormatException ex) {
-							throw new InvalidSPDXAnalysisException("Invalid integer format for property "+property.toString(), ex);
-						}
-					} else if (Boolean.class.equals(propertyClass.get())) {
-						try {
-							retval = Boolean.valueOf((String)retval);
-						} catch(Exception ex) {
-							throw new InvalidSPDXAnalysisException("Invalid boolean format for property "+property.toString(), ex);
-						}
-					}
-				}
-			}
-			return Optional.of(retval);
+		    return literalNodeToObject(propertyValue.asLiteral().getValue(), property);
 		}
 		Resource valueType = propertyValue.asResource().getPropertyResourceValue(RDF.type);
 		Optional<String> sValueType;
@@ -750,7 +729,43 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			}
 		}
 	}
-/**
+	
+    /**
+     * Translate a literal node to an object based on the property and literal value type
+     * @param literalValue node value for the literal
+     * @param property property associated with the literal value
+     * @return the object associated with the literal value
+     * @throws InvalidSPDXAnalysisException
+     */
+    private Optional<Object> literalNodeToObject(Object literalValue, Property property) throws InvalidSPDXAnalysisException {
+        if (literalValue instanceof String) {
+            // need to check type and convert to boolean or integer
+            Optional<Class<? extends Object>> propertyClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(property);
+            if (propertyClass.isPresent()) {
+                if (Integer.class.equals(propertyClass.get())) {
+                    try {
+                        return Optional.of(Integer.parseInt((String)literalValue));
+                    } catch(NumberFormatException ex) {
+                        throw new InvalidSPDXAnalysisException("Invalid integer format for property "+property.toString(), ex);
+                    }
+                } else if (Boolean.class.equals(propertyClass.get())) {
+                    try {
+                        return Optional.of(Boolean.valueOf((String)literalValue));
+                    } catch(Exception ex) {
+                        throw new InvalidSPDXAnalysisException("Invalid boolean format for property "+property.toString(), ex);
+                    }
+                } else {
+                    return Optional.of(literalValue);
+                }
+            } else {
+                return Optional.of(literalValue);
+            }
+        } else {
+            return Optional.of(literalValue);
+        }
+    }
+
+    /**
 	 * Obtain an ID from a resource
 	 * @param resource
 	 * @return ID formatted appropriately for use outside the RdfStore
@@ -838,7 +853,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 */
 	public Stream<TypedValue> getAllItems(@Nullable String typeFilter) {
 		String query = "SELECT ?s ?type  WHERE { ?s  <" + RDF_TYPE + ">  ?type }";
-		QueryExecution qe = QueryExecutionFactory.create(query, model);
+		final QueryExecution qe = QueryExecutionFactory.create(query, model);
 		ResultSet result = qe.execSelect();
 		Stream<QuerySolution> querySolutionStream = StreamSupport
 				.stream(Spliterators.spliteratorUnknownSize(result, Spliterator.ORDERED | Spliterator.NONNULL), false)
@@ -867,7 +882,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				logger.error("Unexpected exception converting to type");
 				throw new RuntimeException(e);
 			}
-		});
+		}).onClose(() -> {qe.close();});
 	}
 
 	/**
@@ -1090,9 +1105,6 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				RDFNode node = iter.next();
 				Optional<Object> value = valueNodeToObject(node, property);
 				if (value.isPresent() && !clazz.isAssignableFrom(value.get().getClass())) {
-					if (!value.isPresent()) {
-						return false;
-					}
 					if (value.get() instanceof TypedValue) {
 						try {
 							if (!clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)value.get()).getType()))) {
@@ -1165,21 +1177,21 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 						return false;
 					}
 				}
-			}
-			if (objectValue.get() instanceof IndividualUriValue) {
-				String uri = ((IndividualUriValue)objectValue.get()).getIndividualURI();
-				if (SpdxConstants.URI_VALUE_NOASSERTION.equals(uri)) {
-					return true;
-				}
-				if (SpdxConstants.URI_VALUE_NONE.equals(uri)) {
-					return true;
-				}
-				Enum<?> spdxEnum = SpdxEnumFactory.uriToEnum.get(uri);
-				if (Objects.nonNull(spdxEnum)) {
-					return clazz.isAssignableFrom(spdxEnum.getClass());
-				} else {
-					return false;
-				}
+				if (objectValue.get() instanceof IndividualUriValue) {
+	                String uri = ((IndividualUriValue)objectValue.get()).getIndividualURI();
+	                if (SpdxConstants.URI_VALUE_NOASSERTION.equals(uri)) {
+	                    return true;
+	                }
+	                if (SpdxConstants.URI_VALUE_NONE.equals(uri)) {
+	                    return true;
+	                }
+	                Enum<?> spdxEnum = SpdxEnumFactory.uriToEnum.get(uri);
+	                if (Objects.nonNull(spdxEnum)) {
+	                    return clazz.isAssignableFrom(spdxEnum.getClass());
+	                } else {
+	                    return false;
+	                }
+	            }
 			}
 			return false;
 		} finally {

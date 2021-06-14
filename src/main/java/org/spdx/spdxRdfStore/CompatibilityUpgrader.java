@@ -81,22 +81,23 @@ public class CompatibilityUpgrader {
 				String query = "SELECT ?s  WHERE { ?s  <" + 
 						RdfSpdxDocumentModelManager.RDF_TYPE + "> <" +
 						SpdxConstants.SPDX_NAMESPACE + entry.getKey() + "> }";
-				QueryExecution qe = QueryExecutionFactory.create(query, model);
-				ResultSet result = qe.execSelect();
-				while (result.hasNext()) {
-					Resource subject = result.next().get("s").asResource();
-					for (Entry<String, String> propEntry:entry.getValue().entrySet()) {
-						Property incompatibleProperty = model.createProperty(propEntry.getKey());
-						if (subject.hasProperty(incompatibleProperty)) {
-							Property compatibleProperty = model.createProperty(propEntry.getValue());
-							NodeIterator iter = model.listObjectsOfProperty(subject, incompatibleProperty);
-							while (iter.hasNext()) {
-								RDFNode object = iter.next();
-								subject.addProperty(compatibleProperty, object);
-							}
-							subject.removeAll(incompatibleProperty);
-						}
-					}
+				try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+				    ResultSet result = qe.execSelect();
+	                while (result.hasNext()) {
+	                    Resource subject = result.next().get("s").asResource();
+	                    for (Entry<String, String> propEntry:entry.getValue().entrySet()) {
+	                        Property incompatibleProperty = model.createProperty(propEntry.getKey());
+	                        if (subject.hasProperty(incompatibleProperty)) {
+	                            Property compatibleProperty = model.createProperty(propEntry.getValue());
+	                            NodeIterator iter = model.listObjectsOfProperty(subject, incompatibleProperty);
+	                            while (iter.hasNext()) {
+	                                RDFNode object = iter.next();
+	                                subject.addProperty(compatibleProperty, object);
+	                            }
+	                            subject.removeAll(incompatibleProperty);
+	                        }
+	                    }
+	                }
 				}
 			}
 			upgradeArtifactOf(model, documentNamespace);
@@ -115,43 +116,44 @@ public class CompatibilityUpgrader {
 	 */
 	private static void upgradeExternalDocumentRefs(Model model, String documentNamespace) throws InvalidSPDXAnalysisException {
 		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#externalDocumentId> ?o }";
-		QueryExecution qe = QueryExecutionFactory.create(query, model);
-		ResultSet result = qe.execSelect();
-		List<Statement> statementsToRemove = new ArrayList<>();
-		List<Statement> statementsToAdd = new ArrayList<>();
-		while (result.hasNext()) {
-			QuerySolution qs = result.next();
-			try {
-				Resource currentExternalRef = qs.get("s").asResource();
-				String id = qs.get("o").asLiteral().getString();
-				if (!SpdxVerificationHelper.isValidExternalDocRef(id)) {
-					throw new InvalidSPDXAnalysisException("Invalid external document ref "+id);
-				}
-				String uri = documentNamespace + "#" + id;
-				if (!currentExternalRef.isURIResource() || uri.equals(currentExternalRef.getURI())) {
-					// need to replace this external ref with one with a valid document ID
-					Resource newExternalRef = model.createResource(uri);
-					// get all the properties and copy them over
-					StmtIterator currentPropIter = currentExternalRef.listProperties();
-					while (currentPropIter.hasNext()) {
-						Statement stmt = currentPropIter.next();
-						statementsToAdd.add(model.createStatement(newExternalRef, stmt.getPredicate(), stmt.getObject()));
-						statementsToRemove.add(stmt);
-					}
-					// change all references from the old value to this one
-					StmtIterator currentExternalRefRefs = model.listStatements(null, null, currentExternalRef);
-					while (currentExternalRefRefs.hasNext()) {
-						Statement stmt = currentExternalRefRefs.next();
-						statementsToAdd.add(model.createStatement(stmt.getSubject(), stmt.getPredicate(), newExternalRef));
-						statementsToRemove.add(stmt);
-					}
-				}
-			} catch(Exception ex) {
-				throw new InvalidSPDXAnalysisException("Error upgrading external document refs",ex);
-			}
+		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+		    ResultSet result = qe.execSelect();
+	        List<Statement> statementsToRemove = new ArrayList<>();
+	        List<Statement> statementsToAdd = new ArrayList<>();
+	        while (result.hasNext()) {
+	            QuerySolution qs = result.next();
+	            try {
+	                Resource currentExternalRef = qs.get("s").asResource();
+	                String id = qs.get("o").asLiteral().getString();
+	                if (!SpdxVerificationHelper.isValidExternalDocRef(id)) {
+	                    throw new InvalidSPDXAnalysisException("Invalid external document ref "+id);
+	                }
+	                String uri = documentNamespace + "#" + id;
+	                if (!currentExternalRef.isURIResource() || uri.equals(currentExternalRef.getURI())) {
+	                    // need to replace this external ref with one with a valid document ID
+	                    Resource newExternalRef = model.createResource(uri);
+	                    // get all the properties and copy them over
+	                    StmtIterator currentPropIter = currentExternalRef.listProperties();
+	                    while (currentPropIter.hasNext()) {
+	                        Statement stmt = currentPropIter.next();
+	                        statementsToAdd.add(model.createStatement(newExternalRef, stmt.getPredicate(), stmt.getObject()));
+	                        statementsToRemove.add(stmt);
+	                    }
+	                    // change all references from the old value to this one
+	                    StmtIterator currentExternalRefRefs = model.listStatements(null, null, currentExternalRef);
+	                    while (currentExternalRefRefs.hasNext()) {
+	                        Statement stmt = currentExternalRefRefs.next();
+	                        statementsToAdd.add(model.createStatement(stmt.getSubject(), stmt.getPredicate(), newExternalRef));
+	                        statementsToRemove.add(stmt);
+	                    }
+	                }
+	            } catch(Exception ex) {
+	                throw new InvalidSPDXAnalysisException("Error upgrading external document refs",ex);
+	            }
+	        }
+	        model.remove(statementsToRemove);
+	        model.add(statementsToAdd);
 		}
-		model.remove(statementsToRemove);
-		model.add(statementsToAdd);
 	}
 
 	/**
@@ -174,54 +176,55 @@ public class CompatibilityUpgrader {
 		List<Statement> statementsToRemove = new ArrayList<>();
 		Set<Integer> addedAnnotations = new HashSet<>(); // to prevent duplicates
 		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#reviewer> ?o }";
-		QueryExecution qe = QueryExecutionFactory.create(query, model);
-		ResultSet result = qe.execSelect();
-		while (result.hasNext()) {
-			QuerySolution qs = result.next();
-			Resource review = qs.get("s").asResource();
-			String reviewer = qs.get("o").asLiteral().toString();
-			Resource annotation = model.createResource();
-			annotation.addProperty(typeProperty, annotationClass);
-			String reviewDate;
-			try {
-				reviewDate = review.getRequiredProperty(model.createProperty(
-						SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_REVIEW_DATE))
-						.getString();
-				if (Objects.isNull(reviewDate)) {
-					throw new InvalidSPDXAnalysisException("Missing or invalid review date for review");
-				}
-			} catch (Exception ex) {
-				throw new InvalidSPDXAnalysisException("Missing or invalid review date for review");
-			}
-			String comment;
-			try {
-				comment = review.getRequiredProperty(commentProperty).getString();
-				if (Objects.isNull(comment)) {
-					throw new InvalidSPDXAnalysisException("Missing or invalid review comment for review");
-				}
-			} catch (Exception ex) {
-				throw new InvalidSPDXAnalysisException("Missing or invalid review comment for review");
-			}
-			StmtIterator iter = review.listProperties();
-			while (iter.hasNext()) {
-				statementsToRemove.add(iter.next());
-			}
-			int hashOfAnnotation = reviewer.hashCode() ^ reviewDate.hashCode() ^ comment.hashCode();
-			if (addedAnnotations.contains(hashOfAnnotation)) {
-				continue;
-			}
-			addedAnnotations.add(hashOfAnnotation);
-			annotation.addProperty(annotatorProperty, reviewer);
-			annotation.addProperty(annotationDateProperty, reviewDate);
-			annotation.addProperty(commentProperty, comment);
-			annotation.addProperty(annotationTypeProperty, reviewerType);
-			document.addProperty(annotationProperty, annotation);
+		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+		    ResultSet result = qe.execSelect();
+	        while (result.hasNext()) {
+	            QuerySolution qs = result.next();
+	            Resource review = qs.get("s").asResource();
+	            String reviewer = qs.get("o").asLiteral().toString();
+	            Resource annotation = model.createResource();
+	            annotation.addProperty(typeProperty, annotationClass);
+	            String reviewDate;
+	            try {
+	                reviewDate = review.getRequiredProperty(model.createProperty(
+	                        SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_REVIEW_DATE))
+	                        .getString();
+	                if (Objects.isNull(reviewDate)) {
+	                    throw new InvalidSPDXAnalysisException("Missing or invalid review date for review");
+	                }
+	            } catch (Exception ex) {
+	                throw new InvalidSPDXAnalysisException("Missing or invalid review date for review");
+	            }
+	            String comment;
+	            try {
+	                comment = review.getRequiredProperty(commentProperty).getString();
+	                if (Objects.isNull(comment)) {
+	                    throw new InvalidSPDXAnalysisException("Missing or invalid review comment for review");
+	                }
+	            } catch (Exception ex) {
+	                throw new InvalidSPDXAnalysisException("Missing or invalid review comment for review");
+	            }
+	            StmtIterator iter = review.listProperties();
+	            while (iter.hasNext()) {
+	                statementsToRemove.add(iter.next());
+	            }
+	            int hashOfAnnotation = reviewer.hashCode() ^ reviewDate.hashCode() ^ comment.hashCode();
+	            if (addedAnnotations.contains(hashOfAnnotation)) {
+	                continue;
+	            }
+	            addedAnnotations.add(hashOfAnnotation);
+	            annotation.addProperty(annotatorProperty, reviewer);
+	            annotation.addProperty(annotationDateProperty, reviewDate);
+	            annotation.addProperty(commentProperty, comment);
+	            annotation.addProperty(annotationTypeProperty, reviewerType);
+	            document.addProperty(annotationProperty, annotation);
+	        }
+	        StmtIterator iter = document.listProperties(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_REVIEWED_BY));
+	        while (iter.hasNext()) {
+	            statementsToRemove.add(iter.next());
+	        }
+	        model.remove(statementsToRemove);
 		}
-		StmtIterator iter = document.listProperties(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_REVIEWED_BY));
-		while (iter.hasNext()) {
-			statementsToRemove.add(iter.next());
-		}
-		model.remove(statementsToRemove);
 	}
 
 	/**
@@ -237,28 +240,29 @@ public class CompatibilityUpgrader {
 		Property artifactOfProperty = model.createProperty("http://spdx.org/rdf/terms#artifactOf");
 		Property relationshipProperty = model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_RELATIONSHIP);
 		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#artifactOf> ?o }";
-		QueryExecution qe = QueryExecutionFactory.create(query, model);
-		ResultSet result = qe.execSelect();
-		String idPrefix = "SPDXRef-fromDoap-";
-		int nextSpdxIdNum = getNexId(model, docNamespace, idPrefix, 0);
-		while (result.hasNext()) {
-			QuerySolution qs = result.next();
-			Resource subject = qs.get("s").asResource();
-			Resource doapProject = qs.get("o").asResource();
-			statementsToRemove.add(model.createStatement(subject, artifactOfProperty, doapProject));
-			StmtIterator iter = doapProject.listProperties();
-			while (iter.hasNext()) {
-				statementsToRemove.add(iter.next());
-			}
-			Resource pkg = convertDoapProjectToSpdxPackage(model, doapProject, docNamespace + idPrefix + Integer.toString(nextSpdxIdNum));
-			if (!addedDoapProjects.contains(pkg.getURI())) {
-				addedDoapProjects.add(pkg.getURI());
-				nextSpdxIdNum = getNexId(model, docNamespace, idPrefix, nextSpdxIdNum);
-				Resource relationship = createRelationship(model, pkg, RelationshipType.GENERATED_FROM);
-				subject.addProperty(relationshipProperty, relationship);
-			}
+		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+		    ResultSet result = qe.execSelect();
+	        String idPrefix = "SPDXRef-fromDoap-";
+	        int nextSpdxIdNum = getNexId(model, docNamespace, idPrefix, 0);
+	        while (result.hasNext()) {
+	            QuerySolution qs = result.next();
+	            Resource subject = qs.get("s").asResource();
+	            Resource doapProject = qs.get("o").asResource();
+	            statementsToRemove.add(model.createStatement(subject, artifactOfProperty, doapProject));
+	            StmtIterator iter = doapProject.listProperties();
+	            while (iter.hasNext()) {
+	                statementsToRemove.add(iter.next());
+	            }
+	            Resource pkg = convertDoapProjectToSpdxPackage(model, doapProject, docNamespace + idPrefix + Integer.toString(nextSpdxIdNum));
+	            if (!addedDoapProjects.contains(pkg.getURI())) {
+	                addedDoapProjects.add(pkg.getURI());
+	                nextSpdxIdNum = getNexId(model, docNamespace, idPrefix, nextSpdxIdNum);
+	                Resource relationship = createRelationship(model, pkg, RelationshipType.GENERATED_FROM);
+	                subject.addProperty(relationshipProperty, relationship);
+	            }
+	        }
+	        model.remove(statementsToRemove);
 		}
-		model.remove(statementsToRemove);
 	}
 
 	/**
