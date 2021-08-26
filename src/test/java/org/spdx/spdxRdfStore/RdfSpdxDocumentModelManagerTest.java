@@ -79,7 +79,7 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		nextId = store.getNextId(IdType.SpdxId);
 		assertEquals("SPDXRef-34", nextId);
 		
-		// Anonomous ID's
+		// Anonymous ID's
 		nextId = store.getNextId(IdType.Anonymous);
 		assertTrue(nextId.startsWith(RdfStore.ANON_PREFIX));
 		String nextNextId = store.getNextId(IdType.Anonymous);
@@ -145,7 +145,7 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertTrue(store.exists(exId));
 		assertTrue(store.exists(exId2));
 		
-		// anonomous
+		// anonymous
 		String anon1 = store.getNextId(IdType.Anonymous);
 		String anon2 = store.getNextId(IdType.Anonymous);
 		assertFalse(store.exists(anon1));

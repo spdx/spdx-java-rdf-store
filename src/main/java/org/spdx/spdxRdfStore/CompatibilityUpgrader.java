@@ -266,7 +266,7 @@ public class CompatibilityUpgrader {
 	}
 
 	/**
-	 * Creates an anonomous relationship resource
+	 * Creates an anonymous relationship resource
 	 * @param model
 	 * @param pkg
 	 * @param relationshipType
