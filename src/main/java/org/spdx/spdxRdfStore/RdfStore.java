@@ -17,6 +17,7 @@
  */
 package org.spdx.spdxRdfStore;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -442,6 +443,9 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 */
 	public String loadModelFromFile(String fileNameOrUrl, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
 		InputStream spdxRdfInput = FileManager.get().open(fileNameOrUrl);
+		if (Objects.isNull(spdxRdfInput)) {
+		    throw new FileNotFoundException(fileNameOrUrl + " not found.");
+		}
 		try {
 			return deSerialize(spdxRdfInput, overwrite);
 		} finally {

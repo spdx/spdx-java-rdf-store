@@ -59,7 +59,6 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
 import org.slf4j.Logger;
@@ -98,6 +97,13 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	static final String RDF_TYPE = SpdxConstants.RDF_NAMESPACE + SpdxConstants.RDF_PROP_TYPE;
 	
 	static final Set<String> LISTED_LICENSE_CLASSES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(SpdxConstants.LISTED_LICENSE_URI_CLASSES)));
+
+    private static final String HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX = SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX.replaceAll("http:", "https:");
+
+    /**
+     * subset of the listed license namespace to be used for matching
+     */
+    private static final CharSequence SPDX_LISTED_LICENSE_SUBPREFIX = "://spdx.org/licenses/";
 	
 	public class RdfListIterator implements Iterator<Object> {
 		
@@ -365,27 +371,13 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 */
 	public boolean exists(String id) {
 		Objects.requireNonNull(id, "Missing required ID");
-		RDFNode resource;
 		model.enterCriticalSection(true);
 		try {
-			if (isAnonId(id)) {
-				try {
-					resource = model.createResource(idToAnonId(id));
-				} catch (SpdxInvalidIdException e) {
-					logger.error("Error getting anonymous ID",e);
-					throw new RuntimeException(e);
-				}
-			} else {
-				// first try local to the document
-				resource = ResourceFactory.createResource(idToUriInDocument(id));
-				if (!model.containsResource(resource)) {
-					// Try listed license URL
-					resource = ResourceFactory.createResource(idToListedLicenseUri(id));
-				}
-			}
-			Statement statement = model.getProperty(resource.asResource(), typeProperty);
-			return Objects.nonNull(statement) && Objects.nonNull(statement.getObject());
-		} finally {
+			Resource idResource = idToResource(id);
+			return Objects.nonNull(idResource);
+		} catch (SpdxInvalidIdException e) {
+            return false;
+        } finally {
 			model.leaveCriticalSection();
 		}
 	}
@@ -419,10 +411,14 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				}
 			} else {
 				// Try listed license URL
-				resource = model.createResource(idToListedLicenseUri(id));
+				resource = model.createResource(SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX + id);
 				if (!model.containsResource(resource)) {
-					// Check for listed license ID's - these URI's may not be defined in the local model
-					
+				    // Check to see if it is defined with "https" instead of "http" - technically incorrect
+				    // but we'll allow it for compatibility
+				    resource = model.createResource(HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX + id);
+				}
+				if (!model.containsResource(resource)) {
+					// Check for listed license ID's - these URI's may not be defined in the local model but are still valid
 					if (!ListedLicenses.getListedLicenses().isSpdxListedExceptionId(id) && 
 							!ListedLicenses.getListedLicenses().isSpdxListedLicenseId(id)) {
 						// Try listed reference types
@@ -480,15 +476,6 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	private boolean isAnonId(String id) {
 		return RdfStore.ANON_ID_PATTERN.matcher(id).matches();
 	}
-	
-	/**
-	 * Convert a listed license to the full listed license URI
-	 * @param licenseId
-	 * @return listed license URI for the license ID
-	 */
-	private String idToListedLicenseUri(String licenseId) {
-		return SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX + licenseId;
-	}
 
 	/**
 	 * Gets an existing or creates a new resource with and ID and type
@@ -505,7 +492,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		model.enterCriticalSection(false);
 		try {
 			if (LISTED_LICENSE_CLASSES.contains(type)) {
-				return model.createResource(idToListedLicenseUri(id), rdfType);
+				return model.createResource(SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX + id, rdfType);
 			} else if (isAnonId(id)) {
 				Resource retval = model.createResource(idToAnonId(id));
 				retval.addProperty(typeProperty, rdfType);
@@ -707,7 +694,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		} else {
 			if (propertyValue.isURIResource()) {
 				final String propertyUri = propertyValue.asResource().getURI();
-				if (propertyUri.contains("://spdx.org/licenses/") && !propertyUri.endsWith(SpdxConstants.NONE_VALUE) && 
+				if (propertyUri.contains(SPDX_LISTED_LICENSE_SUBPREFIX) && !propertyUri.endsWith(SpdxConstants.NONE_VALUE) && 
 						!propertyUri.endsWith(SpdxConstants.NOASSERTION_VALUE)) {
 					// Must be a listed license - Note that the URI may be http: or https:
 					return Optional.of(new TypedValue(resourceToId(propertyValue.asResource()), SpdxConstants.CLASS_SPDX_LISTED_LICENSE));
@@ -1223,10 +1210,20 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	private Resource idToClass(Resource idResource) throws SpdxInvalidIdException {
 		Statement statement = model.getProperty(idResource, typeProperty);
 		if (statement == null || !statement.getObject().isResource()) {
+		    // Check for Listed License URI's
+		    if (idResource.isURIResource() && idResource.getURI().contains(SPDX_LISTED_LICENSE_SUBPREFIX)) {
+		        String licenseOrExceptionId = idResource.getURI().substring(idResource.getURI().lastIndexOf('/')+1);
+		        if (ListedLicenses.getListedLicenses().isSpdxListedLicenseId(licenseOrExceptionId)) {
+		            return model.createResource(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_LISTED_LICENSE);
+		        } else if (ListedLicenses.getListedLicenses().isSpdxListedExceptionId(licenseOrExceptionId)) {
+		            return model.createResource(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_LISTED_LICENSE_EXCEPTION);
+		        }
+		    }
 			logger.error("ID "+idResource+" does not have a type.");
 			throw new SpdxInvalidIdException("ID "+idResource+" does not have a type.");
+		} else {
+		    return statement.getObject().asResource();
 		}
-		return statement.getObject().asResource();
 	}
 
 	public void close() {
