@@ -372,7 +372,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				try {
 					resource = model.createResource(idToAnonId(id));
 				} catch (SpdxInvalidIdException e) {
-					logger.error("Error getting anonomous ID",e);
+					logger.error("Error getting anonymous ID",e);
 					throw new RuntimeException(e);
 				}
 			} else {
@@ -466,8 +466,8 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	private AnonId idToAnonId(String id) throws SpdxInvalidIdException {
 		Matcher matcher = RdfStore.ANON_ID_PATTERN.matcher(id);
 		if (!matcher.matches()) {
-			logger.error(id + " is not a valid Anonomous ID");
-			throw new SpdxInvalidIdException(id + " is not a valid Anonomous ID");
+			logger.error(id + " is not a valid Anonymous ID");
+			throw new SpdxInvalidIdException(id + " is not a valid Anonymous ID");
 		}
 		String anon = matcher.group(1);
 		return new AnonId(anon);
@@ -475,7 +475,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	
 	/**
 	 * @param id
-	 * @return true if the ID is an anonomous ID
+	 * @return true if the ID is an anonymous ID
 	 */
 	private boolean isAnonId(String id) {
 		return RdfStore.ANON_ID_PATTERN.matcher(id).matches();
@@ -554,8 +554,8 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	protected static String resourceToPropertyName(RDFNode node) throws SpdxRdfException {
 		Objects.requireNonNull(node, "Missing required node");
 		if (node.isAnon()) {
-			logger.error("Attempting to convert an anonomous node to a property name");
-			throw new SpdxRdfException("Can not convert an anonomous node into a property name.");
+			logger.error("Attempting to convert an anonymous node to a property name");
+			throw new SpdxRdfException("Can not convert an anonymous node into a property name.");
 		}
 		if (node.isLiteral()) {
 			logger.error("Attempting to convert an literal node to a property name: "+node.toString());
@@ -796,7 +796,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			return retval;
 		} else {
 			logger.error("Attempting to convert unsupported resource type to an ID: "+resource.toString());
-			throw new SpdxRdfException("Only anonomous and URI resources can be converted to an ID");
+			throw new SpdxRdfException("Only anonymous and URI resources can be converted to an ID");
 		}
 	}
 
