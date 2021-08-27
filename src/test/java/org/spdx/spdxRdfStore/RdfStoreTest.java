@@ -40,6 +40,7 @@ public class RdfStoreTest extends TestCase {
 	private static final String DOCUMENT_URI4 = "https://spdx.org.document4";
 	
 	private static final String TEST_FILE_NAME = "TestFiles" + File.separator + "SPDXRdfExample.rdf";
+	private static final String TEST_FILE_HTTPS_NAME = "TestFiles" + File.separator + "SPDXRdfExampleHttps.rdf";   // copy of the SPDXRdfExample file with the listed license URL http string replaced with https
 	private static final String TEST_FILE_NAMESPACE = "http://spdx.org/spdxdocs/spdx-example-444504E0-4F89-41D3-9A0C-0305E82C3301";
 	
 
@@ -119,6 +120,21 @@ public class RdfStoreTest extends TestCase {
             assertEquals(0, resultList.size());
 		}
 	}
+	
+	   public void testInconsistentLicenseUri() throws InvalidSPDXAnalysisException, IOException {
+	       // See issue #1 - inconsistent use of http:// https:// in license Id's are causing issues
+	       // Test file uses the following references to listed licenses:
+	       //    http://spdx.org/licenses/CC0-1.0 - not defined within the RDF file, just a URI reference
+	       //    http://spdx.org/licenses/LGPL-2.0-only - Defined using http:// referenced https://
+	       //    https://spdx.org/licenses/GPL-2.0-only - Defined and referenced using https
+	       //    http://spdx.org/licenses/Apache-2.0 - defined and referenced using http
+	       //    https://spdx.org/licenses/MPL-1.0 - not defined within the RDF file, just a URI reference with https
+	       RdfStore rdfStore = new RdfStore();
+	       rdfStore.loadModelFromFile(TEST_FILE_HTTPS_NAME, false);
+	       SpdxDocument doc = new SpdxDocument(rdfStore, TEST_FILE_NAMESPACE, null, false);
+	       List<String> warnings = doc.verify();
+	       assertEquals(0, warnings.size());
+	    }
 	
 	public void testDelete() throws InvalidSPDXAnalysisException {
 		RdfStore rdfStore = new RdfStore();
