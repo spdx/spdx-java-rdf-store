@@ -59,6 +59,7 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
 import org.slf4j.Logger;
@@ -371,13 +372,31 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	 */
 	public boolean exists(String id) {
 		Objects.requireNonNull(id, "Missing required ID");
+		RDFNode resource;
 		model.enterCriticalSection(true);
 		try {
-			Resource idResource = idToResource(id);
-			return Objects.nonNull(idResource);
-		} catch (SpdxInvalidIdException e) {
-            return false;
-        } finally {
+		    if (isAnonId(id)) {
+                try {
+                    resource = model.createResource(idToAnonId(id));
+                } catch (SpdxInvalidIdException e) {
+                    logger.error("Error getting anonymous ID",e);
+                    throw new RuntimeException(e);
+                }
+            } else {
+                // first try local to the document
+                resource = ResourceFactory.createResource(idToUriInDocument(id));
+                if (!model.containsResource(resource)) {
+                    // Try listed license URL
+                    resource = ResourceFactory.createResource(SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX + id);
+                }
+                if (!model.containsResource(resource)) {
+                    // Try listed license URL with HTTPS prefix - not correct, but we'll go ahead and match as a listed license
+                    resource = ResourceFactory.createResource(HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX + id);
+                }
+            }
+            Statement statement = model.getProperty(resource.asResource(), typeProperty);
+            return Objects.nonNull(statement) && Objects.nonNull(statement.getObject());
+		} finally {
 			model.leaveCriticalSection();
 		}
 	}
