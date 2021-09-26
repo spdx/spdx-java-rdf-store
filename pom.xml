@@ -4,7 +4,7 @@
 
   <groupId>org.spdx</groupId>
   <artifactId>spdx-rdf-store</artifactId>
-  <version>1.0.3-SNAPSHOT</version>
+  <version>1.0.3</version>
   <packaging>jar</packaging>
 
   <name>spdx-rdf-store</name>
@@ -91,22 +91,22 @@
     <dependency>
     	<groupId>org.spdx</groupId>
     	<artifactId>java-spdx-library</artifactId>
-    	<version>1.0.7</version>
+    	<version>1.0.8</version>
     </dependency>
     <dependency>
     	<groupId>org.apache.jena</groupId>
     	<artifactId>jena-core</artifactId>
-    	<version>3.12.0</version>
+    	<version>4.2.0</version>
     </dependency>
     <dependency>
     	<groupId>org.apache.jena</groupId>
     	<artifactId>jena-arq</artifactId>
-    	<version>3.12.0</version>
+    	<version>4.2.0</version>
     </dependency>
     <dependency>
     	<groupId>org.apache.jena</groupId>
     	<artifactId>jena-base</artifactId>
-    	<version>3.12.0</version>
+    	<version>4.2.0</version>
     </dependency>
   </dependencies>
     <build>
