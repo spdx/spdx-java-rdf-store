@@ -51,7 +51,7 @@ import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
-import org.apache.jena.rdf.listeners.ObjectListener;
+import org.apache.jena.rdf.listeners.StatementListener;
 import org.apache.jena.rdf.model.AnonId;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.NodeIterator;
@@ -61,6 +61,7 @@ import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.vocabulary.RDF;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,35 +144,37 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		
 	}
 	
-	/**
-	 * Listen for any new resources being created to make sure we update the next ID numbers
-	 *
-	 */
-	class NextIdListener extends ObjectListener {
-		@Override
-		public void added(Object x) {
-			if (x instanceof RDFNode) {
-				checkAddNewId((RDFNode)x);
-			} else if (x instanceof Statement) {
-				Statement st = (Statement)x;
-				if (Objects.nonNull(st.getSubject())) {
-					checkAddNewId(st.getSubject());
-				}
-			}
-		}
-		
-		@Override
-		public void removed(Object x) {
-			if (x instanceof RDFNode) {
-				checkRemoveId((RDFNode)x);
-			} else if (x instanceof Statement) {
-				Statement st = (Statement)x;
-				if (Objects.nonNull(st.getSubject())) {
-					checkRemoveId(st.getSubject());
-				}
-			}
-		}
+	 /**
+     * Listen for any new resources being created to make sure we update the next ID numbers
+     *
+     */
+	class NextIdListener extends StatementListener {
+	    
+	    @Override
+	    public void addedStatement(Statement s) {
+	        if (Objects.nonNull(s.getSubject())) {
+                StmtIterator iter = s.getModel().listStatements(s.getSubject(), null, (RDFNode)null);
+                if (iter.hasNext()) {
+                    iter.next();    // we have at least one statement with this subject
+                    if (!iter.hasNext()) {
+                        // First added statement with this subject
+                        checkAddNewId(s.getSubject());
+                    }
+                }
+            }
+	    }
+	    
+	    @Override
+	    public void removedStatement(Statement s) {
+            if (Objects.nonNull(s.getSubject())) {
+                StmtIterator iter = s.getModel().listStatements(s.getSubject(), null, (RDFNode)null);
+                if (!iter.hasNext()) {
+                    checkRemoveId(s.getSubject());
+                }
+            }
+	    }
 	}
+	
 	
 	private ReadWriteLock counterLock = new ReentrantReadWriteLock();
 	private NextIdListener nextIdListener = new NextIdListener();
@@ -330,7 +333,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 					id.startsWith(SpdxConstants.SPDX_ELEMENT_REF_PRENUM)) {
 				String previous = idCaseSensitiveMap.put(id.toLowerCase(), id);
 				if (Objects.nonNull(previous)) {
-					logger.warn("Possibly ambiguous ID being introduced.  "+previous+" is being raplaced by "+id);
+					logger.warn("Possibly ambiguous ID being introduced.  "+previous+" is being replaced by "+id);
 				}
 			}
 			Matcher licenseRefMatcher = SpdxConstants.LICENSE_ID_PATTERN_NUMERIC.matcher(id);
