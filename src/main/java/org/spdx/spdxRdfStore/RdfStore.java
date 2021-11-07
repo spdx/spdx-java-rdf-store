@@ -40,7 +40,7 @@ import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ARQ;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.util.FileManager;
+import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -442,7 +442,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 * @throws IOException 
 	 */
 	public String loadModelFromFile(String fileNameOrUrl, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
-		InputStream spdxRdfInput = FileManager.get().open(fileNameOrUrl);
+		InputStream spdxRdfInput = RDFDataMgr.open(fileNameOrUrl);
 		if (Objects.isNull(spdxRdfInput)) {
 		    throw new FileNotFoundException(fileNameOrUrl + " not found.");
 		}
