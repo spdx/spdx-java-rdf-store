@@ -4,7 +4,7 @@
 
   <groupId>org.spdx</groupId>
   <artifactId>spdx-rdf-store</artifactId>
-  <version>1.0.3</version>
+  <version>1.0.4-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>spdx-rdf-store</name>
@@ -91,7 +91,7 @@
     <dependency>
     	<groupId>org.spdx</groupId>
     	<artifactId>java-spdx-library</artifactId>
-    	<version>1.0.8</version>
+    	<version>1.0.9</version>
     </dependency>
     <dependency>
     	<groupId>org.apache.jena</groupId>
