@@ -1311,7 +1311,7 @@ public class SpdxPackageTest extends TestCase {
 				.setLicenseComments(LICENSE_COMMENT1)
 				.setDescription(DESCRIPTION1)
 				.setDownloadLocation(DOWNLOAD_LOCATION1)
-				.setFiles(files)
+				.setFilesAnalyzed(false)
 				.setHomepage(HOMEPAGE1)
 				.setOriginator(ORIGINATOR1)
 				.setPackageFileName(PACKAGEFILENAME1)
