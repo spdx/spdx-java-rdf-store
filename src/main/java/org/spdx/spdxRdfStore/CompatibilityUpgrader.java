@@ -103,8 +103,37 @@ public class CompatibilityUpgrader {
 			upgradeArtifactOf(model, documentNamespace);
 			upgradeReviewers(model, documentNamespace);
 			upgradeExternalDocumentRefs(model, documentNamespace);
+			upgradeHasFiles(model, documentNamespace);
 		} finally {
 			model.leaveCriticalSection();
+		}
+	}
+
+	/**
+	 * Changes all hasFile properties to CONTAINS relationships
+	 * @param model
+	 * @param documentNamespace
+	 */
+	private static void upgradeHasFiles(Model model, String documentNamespace) {
+		String docNamespace = documentNamespace + "#";
+		List<Statement> statementsToRemove = new ArrayList<>();
+		Property hasFileProperty = model.createProperty("http://spdx.org/rdf/terms#hasFile");
+		Property relationshipProperty = model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_RELATIONSHIP);
+		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#hasFile> ?o }";
+		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+		    ResultSet result = qe.execSelect();
+	        String idPrefix = "SPDXRef-fromHasFile-";
+	        int nextSpdxIdNum = getNexId(model, docNamespace, idPrefix, 0);
+	        while (result.hasNext()) {
+	            QuerySolution qs = result.next();
+	            Resource pkg = qs.get("s").asResource();
+	            Resource file = qs.get("o").asResource();
+	            statementsToRemove.add(model.createStatement(pkg, hasFileProperty, file));
+                nextSpdxIdNum = getNexId(model, docNamespace, idPrefix, nextSpdxIdNum);
+                Resource relationship = createRelationship(model, file, RelationshipType.CONTAINS);
+                pkg.addProperty(relationshipProperty, relationship);
+	        }
+	        model.remove(statementsToRemove);
 		}
 	}
 
