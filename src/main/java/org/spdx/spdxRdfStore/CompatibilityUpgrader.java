@@ -126,8 +126,21 @@ public class CompatibilityUpgrader {
 	            Resource pkg = qs.get("s").asResource();
 	            Resource file = qs.get("o").asResource();
 	            statementsToRemove.add(model.createStatement(pkg, hasFileProperty, file));
-                Resource relationship = createRelationship(model, file, RelationshipType.CONTAINS);
-                pkg.addProperty(relationshipProperty, relationship);
+	            // check for existing contains relationships - avoids duplication
+	            List<Statement> foundContainsRelationships = new ArrayList<>();
+	            pkg.listProperties(relationshipProperty).forEach((stmt) -> {
+	            	Resource existingRelationship = stmt.getObject().asResource();
+	            	Resource relatedElement = existingRelationship.getPropertyResourceValue(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_RELATED_SPDX_ELEMENT));
+	            	Resource relationshipType = existingRelationship.getPropertyResourceValue(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_RELATIONSHIP_TYPE));
+	            	if (relatedElement.getURI().equals(file.getURI()) &&
+	            			relationshipType.getURI().equals(RelationshipType.CONTAINS.getIndividualURI())) {
+	            		foundContainsRelationships.add(stmt);
+            		}
+	            });
+	            if (foundContainsRelationships.size() == 0) {
+	            	Resource relationship = createRelationship(model, file, RelationshipType.CONTAINS);
+	            	pkg.addProperty(relationshipProperty, relationship);
+	            }
 	        }
 	        model.remove(statementsToRemove);
 		}

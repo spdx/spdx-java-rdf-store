@@ -48,8 +48,8 @@ public class RdfStoreTest extends TestCase {
 	private static final String TEST_FILE_NAME = "TestFiles" + File.separator + "SPDXRdfExample.rdf";
 	private static final String TEST_FILE_HTTPS_NAME = "TestFiles" + File.separator + "SPDXRdfExampleHttps.rdf";   // copy of the SPDXRdfExample file with the listed license URL http string replaced with https
 	private static final String TEST_FILE_NAMESPACE = "http://spdx.org/spdxdocs/spdx-example-444504E0-4F89-41D3-9A0C-0305E82C3301";
-	private static final String HAS_FILE_FILE_PATH = "TestFiles" + File.separator + "withHasFile.rdf";;
-	
+	private static final String HAS_FILE_FILE_PATH = "TestFiles" + File.separator + "withHasFile.rdf";
+	private static final String HAS_FILE_AND_CONTAINS_PATH  = "TestFiles" + File.separator + "withHasFileAndContains.rdf";
 
 	/* (non-Javadoc)
 	 * @see junit.framework.TestCase#setUp()
@@ -217,8 +217,30 @@ public class RdfStoreTest extends TestCase {
 			if (RelationshipType.CONTAINS.equals(relationship.getRelationshipType()) &&
 					relationship.getRelatedSpdxElement().isPresent() &&
 					"SPDXRef-DoapSource".equals(relationship.getRelatedSpdxElement().get().getId())) {
+				assertFalse(found);
 				found = true;
-				break;
+			}
+		}
+		assertTrue(found);
+	}
+	
+	public void testDuplicateHasFiles() throws InvalidSPDXAnalysisException, IOException {
+		RdfStore rdfStore = new RdfStore();
+		String documentUri = rdfStore.loadModelFromFile(HAS_FILE_AND_CONTAINS_PATH, false);
+		Model model = rdfStore.documentUriModelMap.get(documentUri).model;
+		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#hasFile> ?o }";
+		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+			 ResultSet result = qe.execSelect();
+			 assertFalse(result.hasNext());
+		}
+		SpdxPackage pkg = (SpdxPackage)SpdxModelFactory.getModelObject(rdfStore, documentUri, "SPDXRef-Package", SpdxConstants.CLASS_SPDX_PACKAGE, null, false);
+		boolean found = false;
+		for (Relationship relationship:pkg.getRelationships()) {
+			if (RelationshipType.CONTAINS.equals(relationship.getRelationshipType()) &&
+					relationship.getRelatedSpdxElement().isPresent() &&
+					"SPDXRef-JenaLib".equals(relationship.getRelatedSpdxElement().get().getId())) {
+				assertFalse(found);
+				found = true;
 			}
 		}
 		assertTrue(found);
