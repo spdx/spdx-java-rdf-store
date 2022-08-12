@@ -180,7 +180,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	private NextIdListener nextIdListener = new NextIdListener();
 	
 	private String documentUri;
-	private Model model;
+	protected Model model;
 	/**
 	 * Map of a lower case ID to the case sensitive ID
 	 */

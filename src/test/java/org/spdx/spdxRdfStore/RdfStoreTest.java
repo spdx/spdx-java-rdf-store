@@ -12,16 +12,22 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.jena.query.QueryExecution;
+import org.apache.jena.query.QueryExecutionFactory;
+import org.apache.jena.query.ResultSet;
+import org.apache.jena.rdf.model.Model;
 import org.spdx.library.InvalidSPDXAnalysisException;
 import org.spdx.library.SpdxConstants;
 import org.spdx.library.model.ExternalRef;
 import org.spdx.library.model.ReferenceType;
+import org.spdx.library.model.Relationship;
 import org.spdx.library.model.SpdxDocument;
 import org.spdx.library.model.SpdxElement;
 import org.spdx.library.model.SpdxFile;
 import org.spdx.library.model.SpdxModelFactory;
 import org.spdx.library.model.SpdxPackage;
 import org.spdx.library.model.TypedValue;
+import org.spdx.library.model.enumerations.RelationshipType;
 
 import junit.framework.TestCase;
 
@@ -42,7 +48,8 @@ public class RdfStoreTest extends TestCase {
 	private static final String TEST_FILE_NAME = "TestFiles" + File.separator + "SPDXRdfExample.rdf";
 	private static final String TEST_FILE_HTTPS_NAME = "TestFiles" + File.separator + "SPDXRdfExampleHttps.rdf";   // copy of the SPDXRdfExample file with the listed license URL http string replaced with https
 	private static final String TEST_FILE_NAMESPACE = "http://spdx.org/spdxdocs/spdx-example-444504E0-4F89-41D3-9A0C-0305E82C3301";
-	
+	private static final String HAS_FILE_FILE_PATH = "TestFiles" + File.separator + "withHasFile.rdf";
+	private static final String HAS_FILE_AND_CONTAINS_PATH  = "TestFiles" + File.separator + "withHasFileAndContains.rdf";
 
 	/* (non-Javadoc)
 	 * @see junit.framework.TestCase#setUp()
@@ -193,6 +200,50 @@ public class RdfStoreTest extends TestCase {
 		rdfStore.loadModelFromFile(TEST_FILE_NAME, true);
 		documentDescribes = doc.getDocumentDescribes();
 		assertEquals(2, documentDescribes.size());
+	}
+	
+	public void testHandleHasFile() throws InvalidSPDXAnalysisException, IOException {
+		RdfStore rdfStore = new RdfStore();
+		String documentUri = rdfStore.loadModelFromFile(HAS_FILE_FILE_PATH, false);
+		Model model = rdfStore.documentUriModelMap.get(documentUri).model;
+		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#hasFile> ?o }";
+		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+			 ResultSet result = qe.execSelect();
+			 assertFalse(result.hasNext());
+		}
+		SpdxPackage pkg = (SpdxPackage)SpdxModelFactory.getModelObject(rdfStore, documentUri, "SPDXRef-Package", SpdxConstants.CLASS_SPDX_PACKAGE, null, false);
+		boolean found = false;
+		for (Relationship relationship:pkg.getRelationships()) {
+			if (RelationshipType.CONTAINS.equals(relationship.getRelationshipType()) &&
+					relationship.getRelatedSpdxElement().isPresent() &&
+					"SPDXRef-DoapSource".equals(relationship.getRelatedSpdxElement().get().getId())) {
+				assertFalse(found);
+				found = true;
+			}
+		}
+		assertTrue(found);
+	}
+	
+	public void testDuplicateHasFiles() throws InvalidSPDXAnalysisException, IOException {
+		RdfStore rdfStore = new RdfStore();
+		String documentUri = rdfStore.loadModelFromFile(HAS_FILE_AND_CONTAINS_PATH, false);
+		Model model = rdfStore.documentUriModelMap.get(documentUri).model;
+		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#hasFile> ?o }";
+		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+			 ResultSet result = qe.execSelect();
+			 assertFalse(result.hasNext());
+		}
+		SpdxPackage pkg = (SpdxPackage)SpdxModelFactory.getModelObject(rdfStore, documentUri, "SPDXRef-Package", SpdxConstants.CLASS_SPDX_PACKAGE, null, false);
+		boolean found = false;
+		for (Relationship relationship:pkg.getRelationships()) {
+			if (RelationshipType.CONTAINS.equals(relationship.getRelationshipType()) &&
+					relationship.getRelatedSpdxElement().isPresent() &&
+					"SPDXRef-JenaLib".equals(relationship.getRelatedSpdxElement().get().getId())) {
+				assertFalse(found);
+				found = true;
+			}
+		}
+		assertTrue(found);
 	}
 
 }

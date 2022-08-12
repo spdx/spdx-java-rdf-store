@@ -34,6 +34,7 @@ import org.spdx.library.model.license.ConjunctiveLicenseSet;
 import org.spdx.library.model.license.DisjunctiveLicenseSet;
 import org.spdx.library.model.license.ExtractedLicenseInfo;
 import org.spdx.library.model.license.SpdxListedLicense;
+import org.spdx.library.model.license.SpdxNoAssertionLicense;
 import org.spdx.library.model.pointer.ByteOffsetPointer;
 import org.spdx.library.model.pointer.LineCharPointer;
 import org.spdx.library.model.pointer.StartEndPointer;
@@ -345,6 +346,16 @@ public class SpdxSnippetTest extends TestCase {
 				.setLineRange(LINE1_1, LINE1_2)
 				.build();
 		assertTrue(snippet.compareTo(snippet5) > 0);
+	}
+	
+	public void testMissingLicenseInfo() throws InvalidSPDXAnalysisException {
+		SpdxSnippet snippet = gmo.createSpdxSnippet(gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri()), 
+				"snippetName", null, Arrays.asList(new AnyLicenseInfo[] {}), null,
+				FROM_FILE1, OFFSET1_1, OFFSET1_2)
+				.setLineRange(LINE1_1, LINE1_2)
+				.build();
+		assertEquals(new SpdxNoAssertionLicense(), snippet.getLicenseConcluded());
+		assertTrue(snippet.getLicenseInfoFromFiles().isEmpty());	
 	}
 
 }
