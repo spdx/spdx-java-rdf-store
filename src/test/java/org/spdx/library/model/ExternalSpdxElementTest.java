@@ -122,7 +122,7 @@ public class ExternalSpdxElementTest extends TestCase {
 				gmo.getDocumentUri(), null);
 		assertEquals(expected, result);
 		uri = DOCURI2 + "#" + SPDXID2;
-		String generatedDocId = "DocumentRef-1";
+		String generatedDocId = "DocumentRef-gnrtd1";
 		expected = generatedDocId + ":" + SPDXID2;
 		try {
 			result = ExternalSpdxElement.uriToExternalSpdxElementId(uri, gmo.getModelStore(),
