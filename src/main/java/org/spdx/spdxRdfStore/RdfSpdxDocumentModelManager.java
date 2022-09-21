@@ -665,7 +665,14 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
 			NodeIterator iter = model.listObjectsOfProperty(idResource, property);
 			if (!iter.hasNext()) {
-				return Optional.empty();
+				if (isListedLicenseOrException(idResource)) {
+					// If there is no locally stored property for a listed license or exception
+					// fetch it from listed licenses store
+					return ListedLicenses.getListedLicenses().getLicenseModelStore()
+							.getValue(HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX, id, propertyName);
+				} else {
+					return Optional.empty();
+				}
 			}
 			Optional<Object> result = valueNodeToObject(iter.next(), property);
 			if (iter.hasNext()) {
@@ -678,6 +685,24 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		}
 	}
 	
+	/**
+	 * @param idResource Resource for the ID
+	 * @return true if the type of the ID is a ListedLicenseException or a Listed License
+	 */
+	private boolean isListedLicenseOrException(Resource idResource) {
+		Resource valueType = idResource.getPropertyResourceValue(RDF.type);
+		if (Objects.isNull(valueType)) {
+			return false;
+		}
+		Optional<String> sValueType = SpdxResourceFactory.resourceToSpdxType(valueType);
+		if (sValueType.isEmpty()) {
+			return false;
+		}
+		String sValueTypeStr = sValueType.get();
+		return SpdxConstants.CLASS_SPDX_LISTED_LICENSE.equals(sValueTypeStr) || 
+				SpdxConstants.CLASS_SPDX_LISTED_LICENSE_EXCEPTION.equals(sValueTypeStr);
+	}
+
 	/**
 	 * Convert a node in the RDF graph to a Java object
 	 * @param propertyValue node containing the value
