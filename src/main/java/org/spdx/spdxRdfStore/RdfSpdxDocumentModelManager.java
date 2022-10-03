@@ -101,7 +101,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	static final Set<String> LISTED_LICENSE_CLASSES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(SpdxConstants.LISTED_LICENSE_URI_CLASSES)));
 
     private static final String HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX = SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX.replaceAll("http:", "https:");
-
+    
     /**
      * subset of the listed license namespace to be used for matching
      */
@@ -336,17 +336,17 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 					logger.warn("Possibly ambiguous ID being introduced.  "+previous+" is being replaced by "+id);
 				}
 			}
-			Matcher licenseRefMatcher = SpdxConstants.LICENSE_ID_PATTERN_NUMERIC.matcher(id);
+			Matcher licenseRefMatcher = RdfStore.LICENSE_ID_PATTERN_GENERATED.matcher(id);
 			if (licenseRefMatcher.matches()) {
 				checkUpdateLicenseId(licenseRefMatcher);
 				return;
 			}
-			Matcher documentIdMatcher = RdfStore.DOCUMENT_ID_PATTERN_NUMERIC.matcher(id);
+			Matcher documentIdMatcher = RdfStore.DOCUMENT_ID_PATTERN_GENERATED.matcher(id);
 			if (documentIdMatcher.matches()) {
 				checkUpdateNextDocumentId(documentIdMatcher);
 				return;
 			}
-			Matcher spdxIdMatcher = RdfStore.SPDX_ID_PATTERN_NUMERIC.matcher(id);
+			Matcher spdxIdMatcher = RdfStore.SPDX_ID_PATTERN_GENERATED.matcher(id);
 			if (spdxIdMatcher.matches()) {
 				checkUpdateNextSpdxId(spdxIdMatcher);
 				return;
@@ -843,9 +843,9 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	public String getNextId(IdType idType) throws InvalidSPDXAnalysisException {
 		switch (idType) {
 		case Anonymous: return RdfStore.ANON_PREFIX+String.valueOf(model.createResource().getId());
-		case LicenseRef: return SpdxConstants.NON_STD_LICENSE_ID_PRENUM+String.valueOf(getNextLicenseId());
-		case DocumentRef: return SpdxConstants.EXTERNAL_DOC_REF_PRENUM+String.valueOf(getNextDocumentId());
-		case SpdxId: return SpdxConstants.SPDX_ELEMENT_REF_PRENUM+String.valueOf(getNextSpdxId());
+		case LicenseRef: return SpdxConstants.NON_STD_LICENSE_ID_PRENUM+RdfStore.GENERATED+String.valueOf(getNextLicenseId());
+		case DocumentRef: return SpdxConstants.EXTERNAL_DOC_REF_PRENUM+RdfStore.GENERATED+String.valueOf(getNextDocumentId());
+		case SpdxId: return SpdxConstants.SPDX_ELEMENT_REF_PRENUM+RdfStore.GENERATED+String.valueOf(getNextSpdxId());
 		case ListedLicense: {
 			logger.error("Can not generate a license ID for a Listed License");
 			throw new InvalidSPDXAnalysisException("Can not generate a license ID for a Listed License");

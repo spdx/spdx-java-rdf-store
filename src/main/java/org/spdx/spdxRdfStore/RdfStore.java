@@ -63,8 +63,10 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	
 	static final Logger logger = LoggerFactory.getLogger(RdfStore.class.getName());
 	
-	static Pattern DOCUMENT_ID_PATTERN_NUMERIC = Pattern.compile(SpdxConstants.EXTERNAL_DOC_REF_PRENUM+"(\\d+)$");
-	static Pattern SPDX_ID_PATTERN_NUMERIC = Pattern.compile(SpdxConstants.SPDX_ELEMENT_REF_PRENUM+"(\\d+)$");
+	static final String GENERATED = "gnrtd";
+	static Pattern DOCUMENT_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstants.EXTERNAL_DOC_REF_PRENUM+GENERATED+"(\\d+)$");
+	static Pattern SPDX_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstants.SPDX_ELEMENT_REF_PRENUM+GENERATED+"(\\d+)$");
+	static Pattern LICENSE_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstants.NON_STD_LICENSE_ID_PRENUM+GENERATED+"(\\d+)$");
 	static final String ANON_PREFIX = "__anon__";
 	static Pattern ANON_ID_PATTERN = Pattern.compile(ANON_PREFIX+"(.+)$");
 	private static final Set<String> LITERAL_VALUE_SET = new HashSet<String>(Arrays.asList(SpdxConstants.LITERAL_VALUES));
