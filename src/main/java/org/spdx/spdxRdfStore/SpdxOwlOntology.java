@@ -219,13 +219,13 @@ public class SpdxOwlOntology {
 			if (classUri.endsWith("GenericSpdxElement")) {
 				ontClass = model.getOntClass(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_ELEMENT);
 			} else {
-				logger.error(classUri + " is not an SPDX class");
+				logger.warn(classUri + " is not an SPDX class");
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
 			}
 		}
 		OntProperty property = model.getOntProperty(checkGetOwlUriFromRenamed(propertyUri));
 		if (Objects.isNull(property)) {
-			logger.error(propertyUri + " is not an SPDX property");
+			logger.warn(propertyUri + " is not an SPDX property");
 			throw new MissingDataTypeAndClassRestriction(propertyUri + " is not an SPDX property");
 		}
 		List<Statement> propertyRestrictions = new ArrayList<Statement>();
@@ -253,13 +253,13 @@ public class SpdxOwlOntology {
 			if (classUri.endsWith("GenericSpdxElement")) {
 				ontClass = model.getOntClass(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_ELEMENT);
 			} else {
-				logger.error(classUri + " is not an SPDX class");
+				logger.warn(classUri + " is not an SPDX class");
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
 			}
 		}
 		OntProperty property = model.getOntProperty(checkGetOwlUriFromRenamed(propertyUri));
 		if (Objects.isNull(property)) {
-			logger.error(propertyUri + " is not an SPDX property");
+			logger.warn(propertyUri + " is not an SPDX property");
 			throw new SpdxRdfException(propertyUri + " is not an SPDX property");
 		}
 		List<Statement> propertyRestrictions = new ArrayList<Statement>();
@@ -287,13 +287,13 @@ public class SpdxOwlOntology {
 			if (classUri.endsWith("GenericSpdxElement")) {
 				ontClass = model.getOntClass(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_ELEMENT);
 			} else {
-				logger.error(classUri + " is not an SPDX class");
+				logger.warn(classUri + " is not an SPDX class");
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
 			}
 		}
 		OntProperty property = model.getOntProperty(checkGetOwlUriFromRenamed(propertyUri));
 		if (Objects.isNull(property)) {
-			logger.error(propertyUri + " is not an SPDX property");
+			logger.warn(propertyUri + " is not an SPDX property");
 			throw new SpdxRdfException(propertyUri + " is not an SPDX property");
 		}
 		List<Statement> propertyRestrictions = new ArrayList<Statement>();
