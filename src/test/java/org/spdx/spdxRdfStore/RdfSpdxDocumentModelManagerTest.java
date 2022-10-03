@@ -67,17 +67,17 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
 		// License ID's
 		String nextId = store.getNextId(IdType.LicenseRef);
-		assertEquals("LicenseRef-1", nextId);
-		store.getOrCreate("LicenseRef-33", SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
+		assertEquals("LicenseRef-gnrtd1", nextId);
+		store.getOrCreate("LicenseRef-gnrtd33", SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
 		nextId = store.getNextId(IdType.LicenseRef);
-		assertEquals("LicenseRef-34", nextId);
+		assertEquals("LicenseRef-gnrtd34", nextId);
 		
 		// SPDX ID's
 		nextId = store.getNextId(IdType.SpdxId);
-		assertEquals("SPDXRef-1", nextId);
-		store.getOrCreate("SPDXRef-33", SpdxConstants.CLASS_SPDX_FILE);
+		assertEquals("SPDXRef-gnrtd1", nextId);
+		store.getOrCreate("SPDXRef-gnrtd33", SpdxConstants.CLASS_SPDX_FILE);
 		nextId = store.getNextId(IdType.SpdxId);
-		assertEquals("SPDXRef-34", nextId);
+		assertEquals("SPDXRef-gnrtd34", nextId);
 		
 		// Anonymous ID's
 		nextId = store.getNextId(IdType.Anonymous);
@@ -88,22 +88,22 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		
 		// Document ID
 		nextId = store.getNextId(IdType.DocumentRef);
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "1", nextId);
-		store.getOrCreate(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "33", SpdxConstants.CLASS_EXTERNAL_DOC_REF);
+		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd1", nextId);
+		store.getOrCreate(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd33", SpdxConstants.CLASS_EXTERNAL_DOC_REF);
 		nextId = store.getNextId(IdType.DocumentRef);
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "34", nextId);
+		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd34", nextId);
 		
 		// test initialization of the next ID's
 		RdfSpdxDocumentModelManager store2 = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
 		nextId = store2.getNextId(IdType.LicenseRef);
-		assertEquals("LicenseRef-34", nextId);
+		assertEquals("LicenseRef-gnrtd34", nextId);
 		nextId = store2.getNextId(IdType.SpdxId);
-		assertEquals("SPDXRef-34", nextId);
+		assertEquals("SPDXRef-gnrtd34", nextId);
 		nextId = store2.getNextId(IdType.Anonymous);
 		assertTrue(nextId.startsWith(RdfStore.ANON_PREFIX));
 		assertFalse(nextId.equals(nextNextId));
 		nextId = store2.getNextId(IdType.DocumentRef);
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "34", nextId);
+		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd34", nextId);
 	}
 	
 	
@@ -236,21 +236,21 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
 		// License ID's
 		String nextId = store.getNextId(IdType.LicenseRef);
-		assertEquals("LicenseRef-1", nextId);
+		assertEquals("LicenseRef-gnrtd1", nextId);
 		nextId = store.getNextId(IdType.LicenseRef);
-		assertEquals("LicenseRef-2", nextId);
+		assertEquals("LicenseRef-gnrtd2", nextId);
 		
 		// SPDX ID's
 		nextId = store.getNextId(IdType.SpdxId);
-		assertEquals("SPDXRef-1", nextId);
+		assertEquals("SPDXRef-gnrtd1", nextId);
 		nextId = store.getNextId(IdType.SpdxId);
-		assertEquals("SPDXRef-2", nextId);
+		assertEquals("SPDXRef-gnrtd2", nextId);
 		
 		// Document ID
 		nextId = store.getNextId(IdType.DocumentRef);
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "1", nextId);
+		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd1", nextId);
 		nextId = store.getNextId(IdType.DocumentRef);
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "2", nextId);
+		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd2", nextId);
 	}
 
 	/**
