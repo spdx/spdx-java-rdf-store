@@ -665,7 +665,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
 			NodeIterator iter = model.listObjectsOfProperty(idResource, property);
 			if (!iter.hasNext()) {
-				if (isListedLicenseOrException(idResource)) {
+				if (isListedLicenseOrException(idResource) && !this.exists(id)) {
 					// If there is no locally stored property for a listed license or exception
 					// fetch it from listed licenses store
 					return ListedLicenses.getListedLicenses().getLicenseModelStore()
