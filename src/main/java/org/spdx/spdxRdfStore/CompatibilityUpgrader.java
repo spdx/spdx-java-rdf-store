@@ -132,7 +132,8 @@ public class CompatibilityUpgrader {
 	            	Resource existingRelationship = stmt.getObject().asResource();
 	            	Resource relatedElement = existingRelationship.getPropertyResourceValue(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_RELATED_SPDX_ELEMENT));
 	            	Resource relationshipType = existingRelationship.getPropertyResourceValue(model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_RELATIONSHIP_TYPE));
-	            	if (relatedElement.isURIResource() && relatedElement.getURI().equals(file.getURI()) &&
+	            	if (relatedElement.isURIResource() && file.isURIResource() && relationshipType.isURIResource() &&
+	            			relatedElement.getURI().equals(file.getURI()) &&
 	            			relationshipType.getURI().equals(RelationshipType.CONTAINS.getIndividualURI())) {
 	            		foundContainsRelationships.add(stmt);
             		}
@@ -292,7 +293,7 @@ public class CompatibilityUpgrader {
 	                statementsToRemove.add(iter.next());
 	            }
 	            Resource pkg = convertDoapProjectToSpdxPackage(model, doapProject, docNamespace + idPrefix + Integer.toString(nextSpdxIdNum));
-	            if (!addedDoapProjects.contains(pkg.getURI())) {
+	            if (pkg.isURIResource() && !addedDoapProjects.contains(pkg.getURI())) {
 	                addedDoapProjects.add(pkg.getURI());
 	                nextSpdxIdNum = getNexId(model, docNamespace, idPrefix, nextSpdxIdNum);
 	                Resource relationship = createRelationship(model, pkg, RelationshipType.GENERATED_FROM);
