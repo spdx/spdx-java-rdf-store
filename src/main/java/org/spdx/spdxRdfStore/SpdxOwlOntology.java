@@ -232,7 +232,7 @@ public class SpdxOwlOntology {
 		addPropertyRestrictions(ontClass, property, propertyRestrictions);
 		List<String> retval = new ArrayList<String>();
 		for (Statement stmt:propertyRestrictions) {
-			if (stmt.getPredicate().equals(ON_CLASS_PROPERTY)) {
+			if (stmt.getPredicate().equals(ON_CLASS_PROPERTY) && stmt.getObject().asResource().isURIResource()) {
 				retval.add(stmt.getObject().asResource().getURI());
 			}
 		}
@@ -266,7 +266,7 @@ public class SpdxOwlOntology {
 		addPropertyRestrictions(ontClass, property, propertyRestrictions);
 		List<String> retval = new ArrayList<String>();
 		for (Statement stmt:propertyRestrictions) {
-			if (stmt.getPredicate().equals(ON_DATA_RANGE_PROPERTY)) {
+			if (stmt.getPredicate().equals(ON_DATA_RANGE_PROPERTY) && stmt.getObject().asResource().isURIResource()) {
 				retval.add(stmt.getObject().asResource().getURI());
 			}
 		}
