@@ -40,6 +40,7 @@ import java.util.Spliterators;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -102,6 +103,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 
     private static final String HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX = SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX.replaceAll("http:", "https:");
     
+    private static final Pattern LICENSE_NAMESPACE_PATTERN = Pattern.compile("(http:|https:)"+SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX.substring("http:".length())+".+");
     /**
      * subset of the listed license namespace to be used for matching
      */
@@ -818,6 +820,8 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				} else {
 					retval = resource.getURI().substring(resource.getURI().lastIndexOf('/')+1);
 				}
+			} else if (LICENSE_NAMESPACE_PATTERN.matcher(resource.getURI()).matches()) {
+				retval = resource.getURI().substring(resource.getURI().lastIndexOf('/')+1);
 			} else {
 				retval = resource.getLocalName();
 			}
