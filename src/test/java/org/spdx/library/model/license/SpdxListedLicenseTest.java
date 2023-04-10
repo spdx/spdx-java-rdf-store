@@ -178,7 +178,7 @@ public class SpdxListedLicenseTest extends TestCase {
 	public void testSetFsfLibre() throws InvalidSPDXAnalysisException {
 
 		String name = "name";
-		String id = "AFL-3.0";
+		String id = "DIFFERENT";
 		String text = "text";
 		Collection<String> sourceUrls = new ArrayList<String>(Arrays.asList(new String[] {"source url1", "source url2"}));
 		String notes = "notes";

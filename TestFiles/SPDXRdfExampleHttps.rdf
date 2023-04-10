@@ -1123,6 +1123,7 @@ under the Apache License 2.0 (see: StringUtils.containsWhitespace())</spdx:notic
                                 <spdx:relatedSpdxElement>
                                   <spdx:Package rdf:about="http://spdx.org/spdxdocs/spdx-example-444504E0-4F89-41D3-9A0C-0305E82C3301#SPDXRef-Saxon">
                                     <spdx:name>Saxon</spdx:name>
+                                    <spdx:copyrightText>NOASSERTION</spdx:copyrightText>
                                     <spdx:checksum>
                                       <spdx:Checksum>
                                         <spdx:checksumValue>85ed0817af83a24ad8da68c2b5094de69833983c</spdx:checksumValue>

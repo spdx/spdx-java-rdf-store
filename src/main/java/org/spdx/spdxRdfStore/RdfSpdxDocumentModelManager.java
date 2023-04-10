@@ -72,6 +72,7 @@ import org.spdx.library.SpdxInvalidIdException;
 import org.spdx.library.model.DuplicateSpdxIdException;
 import org.spdx.library.model.IndividualUriValue;
 import org.spdx.library.model.SimpleUriValue;
+import org.spdx.library.model.SpdxIdNotFoundException;
 import org.spdx.library.model.SpdxInvalidTypeException;
 import org.spdx.library.model.SpdxModelFactory;
 import org.spdx.library.model.TypedValue;
@@ -667,11 +668,15 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			Property property = model.createProperty(SpdxResourceFactory.propertyNameToUri(propertyName));
 			NodeIterator iter = model.listObjectsOfProperty(idResource, property);
 			if (!iter.hasNext()) {
-				if (isListedLicenseOrException(idResource) && !this.exists(id)) {
+				if (isListedLicenseOrException(idResource)) {
 					// If there is no locally stored property for a listed license or exception
 					// fetch it from listed licenses store
-					return ListedLicenses.getListedLicenses().getLicenseModelStore()
-							.getValue(HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX, id, propertyName);
+					try {
+						return ListedLicenses.getListedLicenses().getLicenseModelStore()
+								.getValue(HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX, id, propertyName);
+					} catch(SpdxIdNotFoundException e) {
+						return Optional.empty();
+					}
 				} else {
 					return Optional.empty();
 				}
