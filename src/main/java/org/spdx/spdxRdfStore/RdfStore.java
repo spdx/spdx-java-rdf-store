@@ -144,6 +144,19 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		Objects.requireNonNull(documentUri, "Missing required document URI");
 		Objects.requireNonNull(id, "Missing required ID");
 		Objects.requireNonNull(type, "Missing required type");
+		RdfSpdxDocumentModelManager modelManager = getOrCreateModelManager(documentUri);
+		if (modelManager.getCasesensitiveId(id).isPresent()) {
+			throw new DuplicateSpdxIdException("Id "+id+" already exists.");
+		}
+		modelManager.getOrCreate(id, type);
+	}
+	
+	/**
+	 * Gets an existing model manager or create a model manager if it does not exist
+	 * @param documentUri Document URI for the model manager
+	 * @return modelManager associated with the documentUri
+	 */
+	private RdfSpdxDocumentModelManager getOrCreateModelManager(String documentUri) {
 		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
 		if (Objects.isNull(modelManager)) {
 			Model model = ModelFactory.createDefaultModel();
@@ -157,10 +170,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 				modelManager = previousModel;
 			}
 		}
-		if (modelManager.getCasesensitiveId(id).isPresent()) {
-			throw new DuplicateSpdxIdException("Id "+id+" already exists.");
-		}
-		modelManager.getOrCreate(id, type);
+		return modelManager;
 	}
 
 	/* (non-Javadoc)
@@ -427,11 +437,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	@Override
 	public IModelStoreLock enterCriticalSection(String documentUri, boolean readLockRequested) throws InvalidSPDXAnalysisException {
 		Objects.requireNonNull(documentUri, "Missing required document URI");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not enter critical section for a document that has not been created.");
-			throw new InvalidSPDXAnalysisException("Can not enter a critical section for a document which has not been created in the RDF store.");
-		}
+		RdfSpdxDocumentModelManager modelManager = getOrCreateModelManager(documentUri);
 		return modelManager.enterCriticalSection(readLockRequested);
 	}
 	
