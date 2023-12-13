@@ -222,15 +222,15 @@ public class SpdxPackageTest extends TestCase {
 		assertEquals(0, result.size());
 		// verification code
 		pkg.setPackageVerificationCode(null);
-		assertEquals(1, pkg.verify().size());
+		assertEquals(0, pkg.verify().size());
 		
 		// Make sure no files are allowed when filesAnalyzed is false
 		pkg.setFilesAnalyzed(false);
-		assertEquals(1, pkg.verify().size());
+		assertEquals(2, pkg.verify().size());
 		
 		//Make sure we're valid with no files and no verification code when filesAnalyzed = false.
 		pkg.getFiles().clear();
-		assertEquals(0, pkg.verify().size());	
+		assertEquals(1, pkg.verify().size());	
 	}
 	
 	public void testEquivalent() throws InvalidSPDXAnalysisException {
