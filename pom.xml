@@ -52,6 +52,20 @@
 			<id>release</id>
 			<build>
 				<plugins>
+				   	<plugin>
+				      <groupId>org.apache.maven.plugins</groupId>
+				      <artifactId>maven-source-plugin</artifactId>
+				      <version>3.2.1</version>
+				      <executions>
+				        <execution>
+				          <id>attach-sources</id>
+				          <phase>verify</phase>
+				          <goals>
+				            <goal>jar-no-fork</goal>
+				          </goals>
+				        </execution>
+				      </executions>
+				    </plugin>	 
 					<plugin>
 		      			<groupId>org.apache.maven.plugins</groupId>
 		      			<artifactId>maven-gpg-plugin</artifactId>
@@ -91,21 +105,7 @@
 								</goals>
 							</execution>
 						</executions>
-					</plugin>
-				   	<plugin>
-				      <groupId>org.apache.maven.plugins</groupId>
-				      <artifactId>maven-source-plugin</artifactId>
-				      <version>3.2.1</version>
-				      <executions>
-				        <execution>
-				          <id>attach-sources</id>
-				          <phase>verify</phase>
-				          <goals>
-				            <goal>jar-no-fork</goal>
-				          </goals>
-				        </execution>
-				      </executions>
-				    </plugin>	    			
+					</plugin>   			
 				</plugins>
 			</build>
 		</profile>
@@ -264,8 +264,8 @@
     <description>This Java library implements an RDF store implementing the SPDX Java Library Storage Interface using an underlying RDF store.</description>
     <scm>
     	<url>https://github.com/spdx/spdx-java-rdf-store</url>
-    	<connection>scm:git:git://github.com/spdx/spdx-java-rdf-store</connection>
-    	<developerConnection>scm:git:git@github.com:/spdx/spdx-java-rdf-store</developerConnection>
+    	<connection>scm:git:ssh://git@github.com:spdx/spdx-java-rdf-store</connection>
+    	<developerConnection>scm:git:git@github.com:spdx/spdx-java-rdf-store</developerConnection>
     	<tag>master</tag>
     </scm>
     <issueManagement>
