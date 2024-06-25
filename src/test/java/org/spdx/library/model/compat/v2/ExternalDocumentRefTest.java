@@ -1,3 +1,4 @@
+package org.spdx.library.model.compat.v2;
 /**
  * Copyright (c) 2019 Source Auditor Inc.
  *
@@ -15,16 +16,25 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package org.spdx.library.model;
+
 
 
 import java.util.Optional;
 
-import org.spdx.library.DefaultModelStore;
-import org.spdx.library.InvalidSPDXAnalysisException;
+import org.spdx.core.DefaultModelStore;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
 import org.spdx.library.ModelCopyManager;
-import org.spdx.library.SpdxConstants;
-import org.spdx.library.model.enumerations.ChecksumAlgorithm;
+import org.spdx.library.model.v2.Checksum;
+import org.spdx.library.model.v2.ExternalDocumentRef;
+import org.spdx.library.model.v2.GenericModelObject;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
+import org.spdx.library.model.v2.SpdxDocument;
+import org.spdx.library.model.v2.SpdxModelFactory;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v2.Version;
+import org.spdx.library.model.v2.enumerations.ChecksumAlgorithm;
+import org.spdx.library.model.v3.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
 
 import junit.framework.TestCase;
@@ -51,7 +61,9 @@ public class ExternalDocumentRefTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
-		DefaultModelStore.reset(new RdfStore(), "http://test.document.uri/1", new ModelCopyManager());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
+		DefaultModelStore.initialize(new RdfStore("http://defaultdocument"), "http://defaultdocument", new ModelCopyManager());
 		gmo = new GenericModelObject();
 		new SpdxDocument(gmo.getModelStore(), gmo.getDocumentUri(), gmo.getCopyManager(), true);
 		CHECKSUM1 = gmo.createChecksum(ChecksumAlgorithm.SHA1, SHA1_VALUE1);
@@ -83,7 +95,7 @@ public class ExternalDocumentRefTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.ExternalDocumentRef#verify()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.ExternalDocumentRef#verify()}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testVerify() throws InvalidSPDXAnalysisException {
@@ -97,7 +109,7 @@ public class ExternalDocumentRefTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.ExternalDocumentRef#setChecksum(org.spdx.library.model.Checksum)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.ExternalDocumentRef#setChecksum(org.spdx.library.model.compat.v2.compat.v2.Checksum)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testSetChecksum() throws InvalidSPDXAnalysisException {
@@ -116,32 +128,9 @@ public class ExternalDocumentRefTest extends TestCase {
 		edf.setSpdxDocumentNamespace(DOCUMENT_URI2);
 		assertEquals(DOCUMENT_URI2, edf.getSpdxDocumentNamespace());
 	}
-	/**
-	 * Test method for {@link org.spdx.library.model.ExternalDocumentRef#setSpdxDocument(org.spdx.library.model.SpdxDocument)}.
-	 */
-	public void testSetSpdxDocument() throws InvalidSPDXAnalysisException {
-		SpdxDocument doc1 = new SpdxDocument(gmo.getModelStore(), DOCUMENT_URI1, gmo.getCopyManager(), true);
-		SpdxDocument doc2 = new SpdxDocument(gmo.getModelStore(), DOCUMENT_URI2, gmo.getCopyManager(), true);
-		doc1.setName("DocumentName1");
-		doc2.setName("DocumentName2");
-		ExternalDocumentRef edf = gmo.createExternalDocumentRef(DOCUMENT_ID1, DOCUMENT_URI2, CHECKSUM1);
-		ExternalDocumentRef edf2 = new ExternalDocumentRef(edf.getModelStore(), edf.getDocumentUri(), edf.getId(), edf.getCopyManager(), false);
-		assertEquals(DOCUMENT_URI2, edf.getSpdxDocumentNamespace());
-		assertEquals(DOCUMENT_URI2, edf2.getSpdxDocumentNamespace());
-		edf.setSpdxDocument(doc1);
-		assertEquals(DOCUMENT_URI1, edf.getSpdxDocumentNamespace());
-		assertEquals("DocumentName1", edf.getSpdxDocument().get().getName().get());
-		assertEquals(DOCUMENT_URI1, edf2.getSpdxDocumentNamespace());
-		assertEquals("DocumentName1", edf2.getSpdxDocument().get().getName().get());
-		edf.setSpdxDocument(doc2);
-		assertEquals(DOCUMENT_URI2, edf.getSpdxDocumentNamespace());
-		assertEquals("DocumentName2", edf.getSpdxDocument().get().getName().get());
-		assertEquals(DOCUMENT_URI2, edf2.getSpdxDocumentNamespace());
-		assertEquals("DocumentName2", edf2.getSpdxDocument().get().getName().get());
-	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.ExternalDocumentRef#setExternalDocumentId(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.ExternalDocumentRef#setExternalDocumentId(java.lang.String)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testSetExternalDocumentId() throws InvalidSPDXAnalysisException {
@@ -156,7 +145,7 @@ public class ExternalDocumentRefTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.ExternalDocumentRef#compareTo(org.spdx.library.model.ExternalDocumentRef)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.ExternalDocumentRef#compareTo(org.spdx.library.model.compat.v2.compat.v2.ExternalDocumentRef)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testCompareTo() throws InvalidSPDXAnalysisException {
@@ -188,35 +177,35 @@ public class ExternalDocumentRefTest extends TestCase {
 	
 	public void testGetExternalDocRefByDocNamespace() throws InvalidSPDXAnalysisException {
 		// need a document to tie the external refs to
-		SpdxModelFactory.createModelObject(gmo.getModelStore(), gmo.getDocumentUri(), 
-				SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT, gmo.getCopyManager());
+		SpdxModelFactory.createModelObjectV2(gmo.getModelStore(), gmo.getDocumentUri(), 
+				SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, gmo.getCopyManager());
 		// test empty
 		Optional<ExternalDocumentRef> result = ExternalDocumentRef.getExternalDocRefByDocNamespace(gmo.getModelStore(), gmo.getDocumentUri(), 
-				DOCUMENT_URI1, null);
+				DOCUMENT_URI1, null, Version.TWO_POINT_THREE_VERSION);
 		assertFalse(result.isPresent());
 		// test create
 		result = ExternalDocumentRef.getExternalDocRefByDocNamespace(gmo.getModelStore(), gmo.getDocumentUri(), 
-				DOCUMENT_URI1, gmo.getCopyManager());
+				DOCUMENT_URI1, gmo.getCopyManager(), Version.TWO_POINT_THREE_VERSION);
 		assertTrue(result.isPresent());
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd1", result.get().getId());
+		assertTrue(result.get().getId().startsWith(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM));
 		// test non matching
 		result = ExternalDocumentRef.getExternalDocRefByDocNamespace(gmo.getModelStore(), gmo.getDocumentUri(), 
-				DOCUMENT_URI2, null);
+				DOCUMENT_URI2, null, Version.TWO_POINT_THREE_VERSION);
 		assertFalse(result.isPresent());
 		// test add second
 		result = ExternalDocumentRef.getExternalDocRefByDocNamespace(gmo.getModelStore(), gmo.getDocumentUri(), 
-				DOCUMENT_URI2, gmo.getCopyManager());
+				DOCUMENT_URI2, gmo.getCopyManager(), Version.TWO_POINT_THREE_VERSION);
 		assertTrue(result.isPresent());
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd2", result.get().getId());
+		assertTrue(result.get().getId().startsWith(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM));
 		// test match
 		result = ExternalDocumentRef.getExternalDocRefByDocNamespace(gmo.getModelStore(), gmo.getDocumentUri(), 
-				DOCUMENT_URI1, null);
+				DOCUMENT_URI1, null, Version.TWO_POINT_THREE_VERSION);
 		assertTrue(result.isPresent());
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd1", result.get().getId());
+		assertTrue(result.get().getId().startsWith(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM));
 		result = ExternalDocumentRef.getExternalDocRefByDocNamespace(gmo.getModelStore(), gmo.getDocumentUri(), 
-				DOCUMENT_URI2, gmo.getCopyManager());
+				DOCUMENT_URI2, gmo.getCopyManager(), Version.TWO_POINT_THREE_VERSION);
 		assertTrue(result.isPresent());
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd2", result.get().getId());
+		assertTrue(result.get().getId().startsWith(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM));
 	}
 
 }

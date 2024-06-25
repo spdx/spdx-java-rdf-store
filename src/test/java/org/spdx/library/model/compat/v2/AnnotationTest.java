@@ -1,3 +1,4 @@
+package org.spdx.library.model.compat.v2;
 /**
  * Copyright (c) 2019 Source Auditor Inc.
  *
@@ -15,17 +16,22 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package org.spdx.library.model;
+
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.spdx.library.DefaultModelStore;
-import org.spdx.library.InvalidSPDXAnalysisException;
+import org.spdx.core.DefaultModelStore;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
 import org.spdx.library.ModelCopyManager;
-import org.spdx.library.SpdxConstants;
-import org.spdx.library.model.enumerations.AnnotationType;
+import org.spdx.library.model.v2.Annotation;
+import org.spdx.library.model.v2.GenericModelObject;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v2.enumerations.AnnotationType;
+import org.spdx.library.model.v3.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
 
 import junit.framework.TestCase;
@@ -50,9 +56,10 @@ public class AnnotationTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
-		
-		DefaultModelStore.reset(new RdfStore(), "http://test.document.uri/1", new ModelCopyManager());
-		DateFormat format = new SimpleDateFormat(SpdxConstants.SPDX_DATE_FORMAT);
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
+		DefaultModelStore.initialize(new RdfStore("http://defaultdocument"), "http://defaultdocument", new ModelCopyManager());
+		DateFormat format = new SimpleDateFormat(SpdxConstantsCompatV2.SPDX_DATE_FORMAT);
 		date = format.format(new Date());
 		oldDate = format.format(new Date(10101));
 	}
@@ -65,16 +72,16 @@ public class AnnotationTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.Annotation#verify()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.Annotation#verify()}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testVerify() throws InvalidSPDXAnalysisException {
 		Annotation a = new GenericModelObject().createAnnotation(ANNOTATOR1, OTHER_ANNOTATION, date, COMMENT1);
 		assertEquals(0, a.verify().size());
-		a.setPropertyValue(SpdxConstants.PROP_ANNOTATION_TYPE, null);
-		a.setPropertyValue(SpdxConstants.PROP_ANNOTATOR, null);
-		a.setPropertyValue(SpdxConstants.PROP_ANNOTATION_DATE, null);
-		a.setPropertyValue(SpdxConstants.RDFS_PROP_COMMENT, null);
+		a.setPropertyValue(SpdxConstantsCompatV2.PROP_ANNOTATION_TYPE, null);
+		a.setPropertyValue(SpdxConstantsCompatV2.PROP_ANNOTATOR, null);
+		a.setPropertyValue(SpdxConstantsCompatV2.PROP_ANNOTATION_DATE, null);
+		a.setPropertyValue(SpdxConstantsCompatV2.RDFS_PROP_COMMENT, null);
 		assertEquals(4, a.verify().size());
 	}
 	
@@ -91,7 +98,7 @@ public class AnnotationTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.Annotation#setAnnotator(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.Annotation#setAnnotator(java.lang.String)}.
 	 */
 	public void testSetAnnotator() throws InvalidSPDXAnalysisException {
 		Annotation a = new GenericModelObject().createAnnotation(ANNOTATOR1, OTHER_ANNOTATION, date, COMMENT1);	
@@ -106,7 +113,7 @@ public class AnnotationTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.Annotation#setComment(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.Annotation#setComment(java.lang.String)}.
 	 */
 	public void testSetComment() throws InvalidSPDXAnalysisException {
 		Annotation a = new GenericModelObject().createAnnotation(ANNOTATOR1, OTHER_ANNOTATION, date, COMMENT1);
@@ -121,7 +128,7 @@ public class AnnotationTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.Annotation#setAnnotationDate(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.Annotation#setAnnotationDate(java.lang.String)}.
 	 */
 	public void testSetAnnotationDate() throws InvalidSPDXAnalysisException {
 		Annotation a = new GenericModelObject().createAnnotation(ANNOTATOR1, OTHER_ANNOTATION, date, COMMENT1);

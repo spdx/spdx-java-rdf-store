@@ -40,7 +40,7 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spdx.library.SpdxConstants;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
 
 /**
  * Singleton class to manage the OWL ontology
@@ -74,23 +74,23 @@ public class SpdxOwlOntology {
 	static {
 		// Note: We only use the types supported by the storage manager Integer, Boolean, String
 		Map<String, Class<? extends Object>> dataTypeMap = new HashMap<>();
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "string", String.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "hexBinary", String.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "anyURI", String.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "dateTime", String.class);
-		dataTypeMap.put(SpdxConstants.RDFS_NAMESPACE + "Literal", String.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "string", String.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "hexBinary", String.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "anyURI", String.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "dateTime", String.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.RDFS_NAMESPACE + "Literal", String.class);
 		
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "int", Integer.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "integer", Integer.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "short", Integer.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "byte", Integer.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "unsignedShort", Integer.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "unsignedInt", Integer.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "unsignedByte", Integer.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "positiveInteger", Integer.class);
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "nonNegativeInteger", Integer.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "int", Integer.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "integer", Integer.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "short", Integer.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "byte", Integer.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "unsignedShort", Integer.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "unsignedInt", Integer.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "unsignedByte", Integer.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "positiveInteger", Integer.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "nonNegativeInteger", Integer.class);
 		
-		dataTypeMap.put(SpdxConstants.XML_SCHEMA_NAMESPACE + "boolean", Boolean.class);
+		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "boolean", Boolean.class);
 		DATA_TYPE_TO_CLASS = Collections.unmodifiableMap(dataTypeMap);
 	}
 	
@@ -102,8 +102,8 @@ public class SpdxOwlOntology {
 	static {
 		Map<String, String> renamedToOwl = new HashMap<>();
 		Map<String, String> owlToRenamed = new HashMap<>();
-		renamedToOwl.put(SpdxConstants.PROP_SPDX_SPEC_VERSION, SpdxConstants.PROP_SPDX_VERSION);
-		owlToRenamed.put(SpdxConstants.PROP_SPDX_VERSION, SpdxConstants.PROP_SPDX_SPEC_VERSION);
+		renamedToOwl.put(SpdxConstantsCompatV2.PROP_SPDX_SPEC_VERSION.getName(), SpdxConstantsCompatV2.PROP_SPDX_VERSION.getName());
+		owlToRenamed.put(SpdxConstantsCompatV2.PROP_SPDX_VERSION.getName(), SpdxConstantsCompatV2.PROP_SPDX_SPEC_VERSION.getName());
 		RENAMED_PROPERTY_TO_OWL_PROPERTY = Collections.unmodifiableMap(renamedToOwl);
 		OWL_PROPERTY_TO_RENAMED_PROPERTY = Collections.unmodifiableMap(owlToRenamed);
 	}
@@ -147,10 +147,10 @@ public class SpdxOwlOntology {
 	 * @return
 	 */
 	public static String checkGetOwlUriFromRenamed(String renamedPropertyUri) {
-		if (renamedPropertyUri.startsWith(SpdxConstants.SPDX_NAMESPACE) && 
-				RENAMED_PROPERTY_TO_OWL_PROPERTY.containsKey(renamedPropertyUri.substring(SpdxConstants.SPDX_NAMESPACE.length()))) {
-			return SpdxConstants.SPDX_NAMESPACE + 
-					RENAMED_PROPERTY_TO_OWL_PROPERTY.get(renamedPropertyUri.substring(SpdxConstants.SPDX_NAMESPACE.length()));
+		if (renamedPropertyUri.startsWith(SpdxConstantsCompatV2.SPDX_NAMESPACE) && 
+				RENAMED_PROPERTY_TO_OWL_PROPERTY.containsKey(renamedPropertyUri.substring(SpdxConstantsCompatV2.SPDX_NAMESPACE.length()))) {
+			return SpdxConstantsCompatV2.SPDX_NAMESPACE + 
+					RENAMED_PROPERTY_TO_OWL_PROPERTY.get(renamedPropertyUri.substring(SpdxConstantsCompatV2.SPDX_NAMESPACE.length()));
 		} else {
 			return renamedPropertyUri;
 		}
@@ -162,10 +162,10 @@ public class SpdxOwlOntology {
 	 * @return
 	 */
 	public static String checkGetRenamedUri(String owlPropertyUri) {
-		if (owlPropertyUri.startsWith(SpdxConstants.SPDX_NAMESPACE) && 
-				OWL_PROPERTY_TO_RENAMED_PROPERTY.containsKey(owlPropertyUri.substring(SpdxConstants.SPDX_NAMESPACE.length()))) {
-			return SpdxConstants.SPDX_NAMESPACE + 
-					OWL_PROPERTY_TO_RENAMED_PROPERTY.get(owlPropertyUri.substring(SpdxConstants.SPDX_NAMESPACE.length()));
+		if (owlPropertyUri.startsWith(SpdxConstantsCompatV2.SPDX_NAMESPACE) && 
+				OWL_PROPERTY_TO_RENAMED_PROPERTY.containsKey(owlPropertyUri.substring(SpdxConstantsCompatV2.SPDX_NAMESPACE.length()))) {
+			return SpdxConstantsCompatV2.SPDX_NAMESPACE + 
+					OWL_PROPERTY_TO_RENAMED_PROPERTY.get(owlPropertyUri.substring(SpdxConstantsCompatV2.SPDX_NAMESPACE.length()));
 		} else {
 			return owlPropertyUri;
 		}
@@ -217,7 +217,7 @@ public class SpdxOwlOntology {
 		OntClass ontClass = model.getOntClass(classUri);
 		if (Objects.isNull(ontClass)) {
 			if (classUri.endsWith("GenericSpdxElement")) {
-				ontClass = model.getOntClass(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_ELEMENT);
+				ontClass = model.getOntClass(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_ELEMENT);
 			} else {
 				logger.warn(classUri + " is not an SPDX class");
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
@@ -251,7 +251,7 @@ public class SpdxOwlOntology {
 		OntClass ontClass = model.getOntClass(classUri);
 		if (Objects.isNull(ontClass)) {
 			if (classUri.endsWith("GenericSpdxElement")) {
-				ontClass = model.getOntClass(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_ELEMENT);
+				ontClass = model.getOntClass(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_ELEMENT);
 			} else {
 				logger.warn(classUri + " is not an SPDX class");
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
@@ -285,7 +285,7 @@ public class SpdxOwlOntology {
 		OntClass ontClass = model.getOntClass(classUri);
 		if (Objects.isNull(ontClass)) {
 			if (classUri.endsWith("GenericSpdxElement")) {
-				ontClass = model.getOntClass(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_ELEMENT);
+				ontClass = model.getOntClass(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_ELEMENT);
 			} else {
 				logger.warn(classUri + " is not an SPDX class");
 				throw new SpdxRdfException(classUri + " is not an SPDX class");

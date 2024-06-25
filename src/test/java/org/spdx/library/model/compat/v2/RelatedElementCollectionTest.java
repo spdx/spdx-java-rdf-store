@@ -1,3 +1,4 @@
+package org.spdx.library.model.compat.v2;
 /**
  * Copyright (c) 2019 Source Auditor Inc.
  *
@@ -15,20 +16,26 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package org.spdx.library.model;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import org.spdx.library.DefaultModelStore;
-import org.spdx.library.InvalidSPDXAnalysisException;
+import org.spdx.core.DefaultModelStore;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
 import org.spdx.library.ModelCopyManager;
-import org.spdx.library.model.enumerations.RelationshipType;
+import org.spdx.library.model.v2.GenericSpdxElement;
+import org.spdx.library.model.v2.RelatedElementCollection;
+import org.spdx.library.model.v2.Relationship;
+import org.spdx.library.model.v2.SpdxElement;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v2.Version;
+import org.spdx.library.model.v2.enumerations.RelationshipType;
+import org.spdx.library.model.v3.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
-
-import com.github.jsonldjava.shaded.com.google.common.base.Objects;
 
 import junit.framework.TestCase;
 
@@ -54,7 +61,9 @@ public class RelatedElementCollectionTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
-		DefaultModelStore.reset(new RdfStore(), "http://test.document.uri/1", new ModelCopyManager());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
+		DefaultModelStore.initialize(new RdfStore("http://defaultdocument"), "http://defaultdocument", new ModelCopyManager());
 		element = new GenericSpdxElement();
 		relatedDescendentOfElements = new ArrayList<>();
 		descendedOfRelationships = new ArrayList<>();
@@ -104,14 +113,14 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#toImmutableList()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#toImmutableList()}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testToImmutableList() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
-		RelatedElementCollection descendantCollection = new RelatedElementCollection(element, RelationshipType.DESCENDANT_OF);
-		RelatedElementCollection ammendsCollection = new RelatedElementCollection(element, RelationshipType.AMENDS);
-		RelatedElementCollection allCollection = new RelatedElementCollection(element, null);
+		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection descendantCollection = new RelatedElementCollection(element, RelationshipType.DESCENDANT_OF, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection ammendsCollection = new RelatedElementCollection(element, RelationshipType.AMENDS, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection allCollection = new RelatedElementCollection(element, null, Version.CURRENT_SPDX_VERSION);
 		assertListsSame(relatedDescribesOfElements, describesCollection.toImmutableList());
 		assertListsSame(relatedDescendentOfElements, descendantCollection.toImmutableList());
 		assertListsSame(relatedAmendsElements, ammendsCollection.toImmutableList());
@@ -126,13 +135,13 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#size()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#size()}.
 	 */
 	public void testSize() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
-		RelatedElementCollection descendantCollection = new RelatedElementCollection(element, RelationshipType.DESCENDANT_OF);
-		RelatedElementCollection ammendsCollection = new RelatedElementCollection(element, RelationshipType.AMENDS);
-		RelatedElementCollection allCollection = new RelatedElementCollection(element, null);
+		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection descendantCollection = new RelatedElementCollection(element, RelationshipType.DESCENDANT_OF, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection ammendsCollection = new RelatedElementCollection(element, RelationshipType.AMENDS, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection allCollection = new RelatedElementCollection(element, null, Version.CURRENT_SPDX_VERSION);
 		assertEquals(relatedDescribesOfElements.size(), describesCollection.size());
 		assertEquals(relatedDescendentOfElements.size(), descendantCollection.size());
 		assertEquals(relatedAmendsElements.size(), ammendsCollection.size());
@@ -140,11 +149,11 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#isEmpty()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#isEmpty()}.
 	 */
 	public void testIsEmpty() throws InvalidSPDXAnalysisException {
 		SpdxElement ge = new GenericSpdxElement();
-		RelatedElementCollection describeGe = new RelatedElementCollection(ge, RelationshipType.DESCRIBES);
+		RelatedElementCollection describeGe = new RelatedElementCollection(ge, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
 		assertTrue(describeGe.isEmpty());
 		SpdxElement relatedElement = new GenericSpdxElement();
 		relatedElement.setName("related");
@@ -154,11 +163,11 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#contains(java.lang.Object)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#contains(java.lang.Object)}.
 	 */
 	public void testContains() throws InvalidSPDXAnalysisException {
 		SpdxElement ge = new GenericSpdxElement();
-		RelatedElementCollection describeGe = new RelatedElementCollection(ge, RelationshipType.DESCRIBES);
+		RelatedElementCollection describeGe = new RelatedElementCollection(ge, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
 		SpdxElement relatedElement = new GenericSpdxElement();
 		assertFalse(describeGe.contains(relatedElement));
 		relatedElement.setName("related");
@@ -168,13 +177,13 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#iterator()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#iterator()}.
 	 */
 	public void testIterator() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
-		RelatedElementCollection descendantCollection = new RelatedElementCollection(element, RelationshipType.DESCENDANT_OF);
-		RelatedElementCollection ammendsCollection = new RelatedElementCollection(element, RelationshipType.AMENDS);
-		RelatedElementCollection allCollection = new RelatedElementCollection(element, null);
+		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection descendantCollection = new RelatedElementCollection(element, RelationshipType.DESCENDANT_OF, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection ammendsCollection = new RelatedElementCollection(element, RelationshipType.AMENDS, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection allCollection = new RelatedElementCollection(element, null, Version.CURRENT_SPDX_VERSION);
 		Iterator<SpdxElement> iter = describesCollection.iterator();
 		while (iter.hasNext()) {
 			assertTrue(relatedDescribesOfElements.contains(iter.next()));
@@ -192,15 +201,15 @@ public class RelatedElementCollectionTest extends TestCase {
 			assertTrue(allRelatedElements.contains(iter.next()));
 		}
 	}
-
+	
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#toArray()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#toArray()}.
 	 */
 	public void testToArray() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
-		RelatedElementCollection descendantCollection = new RelatedElementCollection(element, RelationshipType.DESCENDANT_OF);
-		RelatedElementCollection ammendsCollection = new RelatedElementCollection(element, RelationshipType.AMENDS);
-		RelatedElementCollection allCollection = new RelatedElementCollection(element, null);
+		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection descendantCollection = new RelatedElementCollection(element, RelationshipType.DESCENDANT_OF, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection ammendsCollection = new RelatedElementCollection(element, RelationshipType.AMENDS, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection allCollection = new RelatedElementCollection(element, null, Version.CURRENT_SPDX_VERSION);
 		assertTrue(ArraysSameDifferentOrder(relatedDescribesOfElements.toArray(), describesCollection.toArray()));
 		assertTrue(ArraysSameDifferentOrder(relatedDescendentOfElements.toArray(), descendantCollection.toArray()));
 		assertTrue(ArraysSameDifferentOrder(relatedAmendsElements.toArray(), ammendsCollection.toArray()));
@@ -214,7 +223,7 @@ public class RelatedElementCollectionTest extends TestCase {
 		for (Object o1:a1) {
 			boolean found = false;
 			for (Object o2:a2) {
-				if (Objects.equal(o1, o2)) {
+				if (java.util.Objects.equals(o1, o2)) {
 					found = true;
 					break;
 				}
@@ -227,11 +236,11 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#add(org.spdx.library.model.SpdxElement)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#add(org.spdx.library.model.compat.v2.compat.v2.SpdxElement)}.
 	 */
 	public void testAdd() throws InvalidSPDXAnalysisException {
 		SpdxElement ge = new GenericSpdxElement();
-		RelatedElementCollection describeGe = new RelatedElementCollection(ge, RelationshipType.DESCRIBES);
+		RelatedElementCollection describeGe = new RelatedElementCollection(ge, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
 		SpdxElement relatedElement = new GenericSpdxElement();
 		relatedElement.setName("related");
 		describeGe.add(relatedElement);
@@ -242,10 +251,10 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#remove(java.lang.Object)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#remove(java.lang.Object)}.
 	 */
 	public void testRemove() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
+		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
 		assertListsSame(relatedDescribesOfElements, describesCollection.toImmutableList());
 		describesCollection.remove(relatedDescribesOfElements.get(0));
 		assertEquals(relatedDescribesOfElements.size()-1,describesCollection.size());
@@ -262,13 +271,13 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#containsAll(java.util.Collection)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#containsAll(java.util.Collection)}.
 	 */
 	public void testContainsAll() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
-		RelatedElementCollection descendantCollection = new RelatedElementCollection(element, RelationshipType.DESCENDANT_OF);
-		RelatedElementCollection ammendsCollection = new RelatedElementCollection(element, RelationshipType.AMENDS);
-		RelatedElementCollection allCollection = new RelatedElementCollection(element, null);
+		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection descendantCollection = new RelatedElementCollection(element, RelationshipType.DESCENDANT_OF, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection ammendsCollection = new RelatedElementCollection(element, RelationshipType.AMENDS, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection allCollection = new RelatedElementCollection(element, null, Version.CURRENT_SPDX_VERSION);
 		assertTrue(describesCollection.containsAll(relatedDescribesOfElements));
 		assertTrue(descendantCollection.containsAll(relatedDescendentOfElements));
 		assertTrue(ammendsCollection.containsAll(relatedAmendsElements));
@@ -276,10 +285,10 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#addAll(java.util.Collection)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#addAll(java.util.Collection)}.
 	 */
 	public void testAddAll() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describeGe = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
+		RelatedElementCollection describeGe = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
 		assertListsSame(relatedDescribesOfElements, describeGe.toImmutableList());
 		SpdxElement relatedElement1 = new GenericSpdxElement();
 		relatedElement1.setName("related1");
@@ -297,10 +306,10 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#removeAll(java.util.Collection)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#removeAll(java.util.Collection)}.
 	 */
 	public void testRemoveAll() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describeGe = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
+		RelatedElementCollection describeGe = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
 		SpdxElement relatedElement1 = new GenericSpdxElement();
 		relatedElement1.setName("related1");
 		SpdxElement relatedElement2 = new GenericSpdxElement();
@@ -318,10 +327,10 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#retainAll(java.util.Collection)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#retainAll(java.util.Collection)}.
 	 */
 	public void testRetainAll() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describeGe = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
+		RelatedElementCollection describeGe = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
 		SpdxElement relatedElement1 = new GenericSpdxElement();
 		relatedElement1.setName("related1");
 		SpdxElement relatedElement2 = new GenericSpdxElement();
@@ -340,11 +349,11 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#clear()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#clear()}.
 	 */
 	public void testClear() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
-		RelatedElementCollection allCollection = new RelatedElementCollection(element, null);
+		RelatedElementCollection describesCollection = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection allCollection = new RelatedElementCollection(element, null, Version.CURRENT_SPDX_VERSION);
 		assertEquals(relatedDescribesOfElements.size(), describesCollection.size());
 		assertEquals(allRelatedElements.size(), allCollection.size());
 		describesCollection.clear();
@@ -355,13 +364,13 @@ public class RelatedElementCollectionTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.RelatedElementCollection#equals(java.lang.Object)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.RelatedElementCollection#equals(java.lang.Object)}.
 	 */
 	public void testEqualsObject() throws InvalidSPDXAnalysisException {
-		RelatedElementCollection describesCollection1 = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
-		RelatedElementCollection allCollection1 = new RelatedElementCollection(element, null);
-		RelatedElementCollection describesCollection2 = new RelatedElementCollection(element, RelationshipType.DESCRIBES);
-		RelatedElementCollection allCollection2 = new RelatedElementCollection(element, null);
+		RelatedElementCollection describesCollection1 = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection allCollection1 = new RelatedElementCollection(element, null, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection describesCollection2 = new RelatedElementCollection(element, RelationshipType.DESCRIBES, Version.CURRENT_SPDX_VERSION);
+		RelatedElementCollection allCollection2 = new RelatedElementCollection(element, null, Version.CURRENT_SPDX_VERSION);
 		assertTrue(describesCollection1.equals(describesCollection2));
 		assertTrue(describesCollection2.equals(describesCollection1));
 		assertTrue(allCollection1.equals(allCollection2));

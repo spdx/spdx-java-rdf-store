@@ -1,6 +1,6 @@
 # Spdx-Java-Rdf-Store
 
-This Java library implements an RDF store implementing the [SPDX Java Library Storage Interface](https://github.com/spdx/Spdx-Java-Library#storage-interface) using an underlying RDF store.
+This Java library implements an RDF store supported SPDX spec version 2.3 and earlier implementing the [SPDX Java Library Storage Interface](https://github.com/spdx/Spdx-Java-Library#storage-interface) using an underlying RDF store.
 
 # Code quality badges
 
@@ -10,7 +10,9 @@ This Java library implements an RDF store implementing the [SPDX Java Library St
 
 This library is intended to be used in conjunction with the [SPDX Java Library](https://github.com/spdx/Spdx-Java-Library).
 
-Simply create a new instance of `RdfStore()` and reference it as your storage.
+Simply create a new instance of `RdfStore(documentNamespace)` and reference it as your storage.  The documentNamespace is the namespace used for the store.
+
+Note that this version of the RDF library only supports a single document namespace and DOES NOT support spec versions 3.0 and later.
 
 # Serializing and Deserializing RDF Formats
 
@@ -24,5 +26,5 @@ A convenience method `public String loadModelFromFile(String fileNameOrUrl, bool
 
 # Development Status
 
-Mostly stable - although it has not been widely used.
+Less stable - it has just been updated to support the redesigned storage interfaces.
 

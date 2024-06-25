@@ -16,18 +16,22 @@ import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.Model;
-import org.spdx.library.InvalidSPDXAnalysisException;
-import org.spdx.library.SpdxConstants;
-import org.spdx.library.model.ExternalRef;
-import org.spdx.library.model.ReferenceType;
-import org.spdx.library.model.Relationship;
-import org.spdx.library.model.SpdxDocument;
-import org.spdx.library.model.SpdxElement;
-import org.spdx.library.model.SpdxFile;
-import org.spdx.library.model.SpdxModelFactory;
-import org.spdx.library.model.SpdxPackage;
-import org.spdx.library.model.TypedValue;
-import org.spdx.library.model.enumerations.RelationshipType;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
+import org.spdx.core.TypedValue;
+import org.spdx.library.model.v2.ExternalRef;
+import org.spdx.library.model.v2.ReferenceType;
+import org.spdx.library.model.v2.Relationship;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
+import org.spdx.library.model.v2.SpdxDocument;
+import org.spdx.library.model.v2.SpdxElement;
+import org.spdx.library.model.v2.SpdxFile;
+import org.spdx.library.model.v2.SpdxModelFactory;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v2.SpdxPackage;
+import org.spdx.library.model.v2.enumerations.RelationshipType;
+import org.spdx.library.model.v3.SpdxModelInfoV3_0;
+import org.spdx.storage.CompatibleModelStoreWrapper;
 
 import junit.framework.TestCase;
 
@@ -37,13 +41,10 @@ import junit.framework.TestCase;
  */
 public class RdfStoreTest extends TestCase {
 
-	private static final String ID_2 = SpdxConstants.SPDX_ELEMENT_REF_PRENUM + "2";
-	private static final String ID_3 = SpdxConstants.SPDX_ELEMENT_REF_PRENUM + "3";
-	private static final String ID_4 = SpdxConstants.SPDX_ELEMENT_REF_PRENUM + "4";
+	private static final String ID_2 = SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM + "2";
+	private static final String ID_3 = SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM + "3";
+	private static final String ID_4 = SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM + "4";
 	private static final String DOCUMENT_URI1 = "https://spdx.org.document1";
-	private static final String DOCUMENT_URI2 = "https://spdx.org.document2";
-	private static final String DOCUMENT_URI3 = "https://spdx.org.document3";
-	private static final String DOCUMENT_URI4 = "https://spdx.org.document4";
 	
 	private static final String TEST_FILE_NAME = "TestFiles" + File.separator + "SPDXRdfExample.rdf";
 	private static final String TEST_FILE_HTTPS_NAME = "TestFiles" + File.separator + "SPDXRdfExampleHttps.rdf";   // copy of the SPDXRdfExample file with the listed license URL http string replaced with https
@@ -56,6 +57,8 @@ public class RdfStoreTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
 	}
 
 	/* (non-Javadoc)
@@ -64,62 +67,41 @@ public class RdfStoreTest extends TestCase {
 	protected void tearDown() throws Exception {
 		super.tearDown();
 	}
-
-	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfStore#getDocumentUris()}.
-	 * @throws Exception 
-	 */
-	public void testGetDocumentUris() throws Exception {
-		try (RdfStore rdfStore = new RdfStore()) {
-			rdfStore.create(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-			rdfStore.create(DOCUMENT_URI2, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-			rdfStore.create(DOCUMENT_URI3, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-			rdfStore.create(DOCUMENT_URI4, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-			List<String> result = rdfStore.getDocumentUris();
-			assertEquals(4, result.size());
-			assertTrue(result.contains(DOCUMENT_URI1));
-			assertTrue(result.contains(DOCUMENT_URI2));
-			assertTrue(result.contains(DOCUMENT_URI3));
-			assertTrue(result.contains(DOCUMENT_URI4));
-		}
-	}
 	
 	public void testClose() throws Exception {
 		RdfStore rdfStore = null;
 		try {
-			rdfStore = new RdfStore();
-			rdfStore.create(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-			rdfStore.create(DOCUMENT_URI2, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-			rdfStore.create(DOCUMENT_URI3, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-			rdfStore.create(DOCUMENT_URI4, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT);
-			List<String> result = rdfStore.getDocumentUris();
-			assertEquals(4, result.size());
-			assertTrue(result.contains(DOCUMENT_URI1));
-			assertTrue(result.contains(DOCUMENT_URI2));
-			assertTrue(result.contains(DOCUMENT_URI3));
-			assertTrue(result.contains(DOCUMENT_URI4));
+			rdfStore = new RdfStore(DOCUMENT_URI1);
+			rdfStore.create(new TypedValue(DOCUMENT_URI1 + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, 
+					SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION));
 		} finally {
 		    if (Objects.nonNull(rdfStore)) {
 		        rdfStore.close();
 		    }
 		}
-		assertEquals(0, rdfStore.documentUriModelMap.size());
+		try {
+			rdfStore.create(new TypedValue(DOCUMENT_URI1 + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, 
+					SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION));
+			fail("Able to create items in a closed RDF store");
+		} catch (InvalidSPDXAnalysisException ex) {
+			// expected
+		}
 	}
 
 	/**
 	 * Test method for {@link org.spdx.spdxRdfStore.RdfStore#getAllItems(java.lang.String, java.lang.String)}.
 	 */
 	public void testGetAllItems() throws InvalidSPDXAnalysisException {
-		RdfStore rdfStore = new RdfStore();
-		SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT, null);
-		SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, ID_2, SpdxConstants.CLASS_SPDX_FILE, null);
-		SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, ID_3, SpdxConstants.CLASS_SPDX_FILE, null);
-		SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, ID_4, SpdxConstants.CLASS_SPDX_FILE, null);
-		try (Stream<TypedValue> result = rdfStore.getAllItems(DOCUMENT_URI1, SpdxConstants.CLASS_SPDX_FILE)) {
+		RdfStore rdfStore = new RdfStore(DOCUMENT_URI1);
+		SpdxModelFactory.createModelObjectV2(rdfStore, DOCUMENT_URI1, SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, null);
+		SpdxModelFactory.createModelObjectV2(rdfStore, DOCUMENT_URI1, ID_2, SpdxConstantsCompatV2.CLASS_SPDX_FILE, null);
+		SpdxModelFactory.createModelObjectV2(rdfStore, DOCUMENT_URI1, ID_3, SpdxConstantsCompatV2.CLASS_SPDX_FILE, null);
+		SpdxModelFactory.createModelObjectV2(rdfStore, DOCUMENT_URI1, ID_4, SpdxConstantsCompatV2.CLASS_SPDX_FILE, null);
+		try (Stream<TypedValue> result = rdfStore.getAllItems(DOCUMENT_URI1, SpdxConstantsCompatV2.CLASS_SPDX_FILE)) {
 	        final ArrayList<TypedValue> resultList = new ArrayList<>();
-            resultList.add(new TypedValue(ID_2, SpdxConstants.CLASS_SPDX_FILE));
-            resultList.add(new TypedValue(ID_3, SpdxConstants.CLASS_SPDX_FILE));
-            resultList.add(new TypedValue(ID_4, SpdxConstants.CLASS_SPDX_FILE));
+            resultList.add(new TypedValue(DOCUMENT_URI1 + "#" + ID_2, SpdxConstantsCompatV2.CLASS_SPDX_FILE, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION));
+            resultList.add(new TypedValue(DOCUMENT_URI1 + "#" + ID_3, SpdxConstantsCompatV2.CLASS_SPDX_FILE, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION));
+            resultList.add(new TypedValue(DOCUMENT_URI1 + "#" + ID_4, SpdxConstantsCompatV2.CLASS_SPDX_FILE, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION));
             for (TypedValue tv:result.collect(Collectors.toList())) {
                 assertTrue(resultList.contains(tv));
                 resultList.remove(tv);
@@ -136,7 +118,7 @@ public class RdfStoreTest extends TestCase {
 	       //    https://spdx.org/licenses/GPL-2.0-only - Defined and referenced using https
 	       //    http://spdx.org/licenses/Apache-2.0 - defined and referenced using http
 	       //    https://spdx.org/licenses/MPL-1.0 - not defined within the RDF file, just a URI reference with https
-	       RdfStore rdfStore = new RdfStore();
+	       RdfStore rdfStore = new RdfStore(DOCUMENT_URI1);
 	       rdfStore.loadModelFromFile(TEST_FILE_HTTPS_NAME, false);
 	       SpdxDocument doc = new SpdxDocument(rdfStore, TEST_FILE_NAMESPACE, null, false);
 	       List<String> warnings = doc.verify();
@@ -144,11 +126,11 @@ public class RdfStoreTest extends TestCase {
 	    }
 	
 	public void testDelete() throws InvalidSPDXAnalysisException {
-		RdfStore rdfStore = new RdfStore();
-		SpdxModelFactory.createModelObject(rdfStore, DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID, SpdxConstants.CLASS_SPDX_DOCUMENT, null);
-		assertTrue(rdfStore.exists(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID));
-		rdfStore.delete(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID);
-		assertFalse(rdfStore.exists(DOCUMENT_URI1, SpdxConstants.SPDX_DOCUMENT_ID));
+		RdfStore rdfStore = new RdfStore(DOCUMENT_URI1);
+		SpdxModelFactory.createModelObjectV2(rdfStore, DOCUMENT_URI1, SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, null);
+		assertTrue(rdfStore.exists(DOCUMENT_URI1 + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID));
+		rdfStore.delete(DOCUMENT_URI1 + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID);
+		assertFalse(rdfStore.exists(DOCUMENT_URI1 + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID));
 	}
 
 	/**
@@ -156,7 +138,7 @@ public class RdfStoreTest extends TestCase {
 	 * @throws IOException 
 	 */
 	public void testLoadModelFromFile() throws InvalidSPDXAnalysisException, IOException {
-		RdfStore rdfStore = new RdfStore();
+		RdfStore rdfStore = new RdfStore(DOCUMENT_URI1);
 		rdfStore.loadModelFromFile(TEST_FILE_NAME, false);
 		SpdxDocument doc = new SpdxDocument(rdfStore, TEST_FILE_NAMESPACE, null, false);
 		Collection<SpdxElement> documentDescribes = doc.getDocumentDescribes();
@@ -203,15 +185,15 @@ public class RdfStoreTest extends TestCase {
 	}
 	
 	public void testHandleHasFile() throws InvalidSPDXAnalysisException, IOException {
-		RdfStore rdfStore = new RdfStore();
+		RdfStore rdfStore = new RdfStore(DOCUMENT_URI1);
 		String documentUri = rdfStore.loadModelFromFile(HAS_FILE_FILE_PATH, false);
-		Model model = rdfStore.documentUriModelMap.get(documentUri).model;
+		Model model = rdfStore.modelManager.model;
 		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#hasFile> ?o }";
 		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
 			 ResultSet result = qe.execSelect();
 			 assertFalse(result.hasNext());
 		}
-		SpdxPackage pkg = (SpdxPackage)SpdxModelFactory.getModelObject(rdfStore, documentUri, "SPDXRef-Package", SpdxConstants.CLASS_SPDX_PACKAGE, null, false);
+		SpdxPackage pkg = (SpdxPackage)SpdxModelFactory.getModelObjectV2(rdfStore, documentUri, "SPDXRef-Package", SpdxConstantsCompatV2.CLASS_SPDX_PACKAGE, null, false);
 		boolean found = false;
 		for (Relationship relationship:pkg.getRelationships()) {
 			if (RelationshipType.CONTAINS.equals(relationship.getRelationshipType()) &&
@@ -225,15 +207,15 @@ public class RdfStoreTest extends TestCase {
 	}
 	
 	public void testDuplicateHasFiles() throws InvalidSPDXAnalysisException, IOException {
-		RdfStore rdfStore = new RdfStore();
+		RdfStore rdfStore = new RdfStore(DOCUMENT_URI1);
 		String documentUri = rdfStore.loadModelFromFile(HAS_FILE_AND_CONTAINS_PATH, false);
-		Model model = rdfStore.documentUriModelMap.get(documentUri).model;
+		Model model = rdfStore.modelManager.model;
 		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#hasFile> ?o }";
 		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
 			 ResultSet result = qe.execSelect();
 			 assertFalse(result.hasNext());
 		}
-		SpdxPackage pkg = (SpdxPackage)SpdxModelFactory.getModelObject(rdfStore, documentUri, "SPDXRef-Package", SpdxConstants.CLASS_SPDX_PACKAGE, null, false);
+		SpdxPackage pkg = (SpdxPackage)SpdxModelFactory.getModelObjectV2(rdfStore, documentUri, "SPDXRef-Package", SpdxConstantsCompatV2.CLASS_SPDX_PACKAGE, null, false);
 		boolean found = false;
 		for (Relationship relationship:pkg.getRelationships()) {
 			if (RelationshipType.CONTAINS.equals(relationship.getRelationshipType()) &&

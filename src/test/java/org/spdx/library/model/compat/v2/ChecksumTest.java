@@ -1,3 +1,4 @@
+package org.spdx.library.model.compat.v2;
 /**
  * Copyright (c) 2019 Source Auditor Inc.
  *
@@ -15,16 +16,21 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package org.spdx.library.model;
+
 
 import java.util.List;
 
-import org.spdx.library.DefaultModelStore;
-import org.spdx.library.InvalidSPDXAnalysisException;
+import org.spdx.core.DefaultModelStore;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
 import org.spdx.library.ModelCopyManager;
-import org.spdx.library.SpdxConstants;
-import org.spdx.library.Version;
-import org.spdx.library.model.enumerations.ChecksumAlgorithm;
+import org.spdx.library.model.v2.Checksum;
+import org.spdx.library.model.v2.GenericModelObject;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v2.Version;
+import org.spdx.library.model.v2.enumerations.ChecksumAlgorithm;
+import org.spdx.library.model.v3.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
 
 import junit.framework.TestCase;
@@ -75,7 +81,9 @@ public class ChecksumTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
-		DefaultModelStore.reset(new RdfStore(), "http://test.document.uri/1", new ModelCopyManager());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
+		DefaultModelStore.initialize(new RdfStore("http://defaultdocument"), "http://defaultdocument", new ModelCopyManager());
 		gmo = new GenericModelObject();
 		TEST_CHECKSUMS = new Checksum[ALGORITHMS.length];
 		for (int i = 0; i < ALGORITHMS.length; i++) {
@@ -105,22 +113,25 @@ public class ChecksumTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.Checksum#verify()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.Checksum#verify()}.
 	 */
 	public void testVerify() throws InvalidSPDXAnalysisException {
 		Checksum checksum = gmo.createChecksum(ChecksumAlgorithm.SHA1, "0123456789abcdef0123456789abcdef01234567");
 		List<String> verify = checksum.verify();
 		
-		checksum.setPropertyValue(SpdxConstants.PROP_CHECKSUM_VALUE, "Bad value");
+		checksum.setPropertyValue(SpdxConstantsCompatV2.PROP_CHECKSUM_VALUE, "Bad value");
 		assertEquals(1, checksum.verify().size());
 		checksum.setValue("0123456789abcdef0123456789abcdef01234567");
 		assertEquals(0, verify.size());
-		checksum.setPropertyValue(SpdxConstants.PROP_CHECKSUM_ALGORITHM, null);
+		checksum.setPropertyValue(SpdxConstantsCompatV2.PROP_CHECKSUM_ALGORITHM, null);
 		assertEquals(1, checksum.verify().size());
+		for (Checksum cksum : TEST_CHECKSUMS) {
+			assertEquals(0, cksum.verify().size());
+		}
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.Checksum#setAlgorithm(org.spdx.library.model.enumerations.ChecksumAlgorithm)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.Checksum#setAlgorithm(org.spdx.library.model.compat.v2.compat.v2.enumerations.ChecksumAlgorithm)}.
 	 */
 	public void testSetAlgorithm() throws InvalidSPDXAnalysisException {
 		Checksum[] checksumReferences = new Checksum[TEST_CHECKSUMS.length];
@@ -143,7 +154,7 @@ public class ChecksumTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.Checksum#setValue(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.Checksum#setValue(java.lang.String)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testSetValue() throws InvalidSPDXAnalysisException {
@@ -167,7 +178,7 @@ public class ChecksumTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.Checksum#toString()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.Checksum#toString()}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testToString() throws InvalidSPDXAnalysisException {
@@ -176,16 +187,16 @@ public class ChecksumTest extends TestCase {
 			assertTrue(TEST_CHECKSUMS[i].toString().contains(VALUES[i]));
 		}
 		Checksum checksum = gmo.createChecksum(ALGORITHMS[0], VALUES[0]);
-		checksum.setPropertyValue(SpdxConstants.PROP_CHECKSUM_ALGORITHM, null);
+		checksum.setPropertyValue(SpdxConstantsCompatV2.PROP_CHECKSUM_ALGORITHM, null);
 		assertTrue(checksum.toString().contains("EMPTY"));
-		checksum.setPropertyValue(SpdxConstants.PROP_CHECKSUM_VALUE, null);
+		checksum.setPropertyValue(SpdxConstantsCompatV2.PROP_CHECKSUM_VALUE, null);
 		assertTrue(checksum.toString().contains("EMPTY"));
 		checksum.setAlgorithm(ALGORITHMS[0]);
 		assertTrue(checksum.toString().contains("EMPTY"));
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.Checksum#compareTo(org.spdx.library.model.Checksum)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.Checksum#compareTo(org.spdx.library.model.compat.v2.compat.v2.Checksum)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testCompareTo() throws InvalidSPDXAnalysisException {
