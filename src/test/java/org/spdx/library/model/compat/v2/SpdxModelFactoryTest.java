@@ -13,7 +13,7 @@ import org.spdx.library.model.v2.Checksum;
 import org.spdx.library.model.v2.ModelObjectV2;
 import org.spdx.library.model.v2.SpdxConstantsCompatV2;
 import org.spdx.library.model.v2.SpdxDocument;
-import org.spdx.library.model.v2.SpdxModelFactory;
+import org.spdx.library.model.v2.SpdxModelFactoryCompatV2;
 import org.spdx.library.model.v2.SpdxModelInfoV2_X;
 import org.spdx.library.model.v3.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
@@ -45,28 +45,28 @@ public class SpdxModelFactoryTest extends TestCase {
 	}
 	
 	public void testCreateSpdxDocumentV2() throws InvalidSPDXAnalysisException {
-		SpdxDocument result = SpdxModelFactory.createSpdxDocumentV2(modelStore, DOCUMENT_URI, copyManager);
+		SpdxDocument result = SpdxModelFactoryCompatV2.createSpdxDocumentV2(modelStore, DOCUMENT_URI, copyManager);
 		assertEquals(SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, result.getId());
 	}
 
 	public void testCreateModelObjectV2() throws InvalidSPDXAnalysisException {
-		ModelObjectV2 result = SpdxModelFactory.createModelObjectV2(modelStore, DOCUMENT_URI, ID1, 
+		ModelObjectV2 result = SpdxModelFactoryCompatV2.createModelObjectV2(modelStore, DOCUMENT_URI, ID1, 
 				SpdxConstantsCompatV2.CLASS_SPDX_CHECKSUM, copyManager);
 		assertTrue(result instanceof Checksum);
 		assertEquals(ID1, result.getId());
 	}
 
 	public void testGetModelObjectIModelStoreStringStringStringModelCopyManagerBooleanV2() throws InvalidSPDXAnalysisException {
-		ModelObjectV2 result = SpdxModelFactory.getModelObjectV2(modelStore, DOCUMENT_URI, ID1, 
+		ModelObjectV2 result = SpdxModelFactoryCompatV2.getModelObjectV2(modelStore, DOCUMENT_URI, ID1, 
 				SpdxConstantsCompatV2.CLASS_SPDX_CHECKSUM, copyManager, true);
 		assertTrue(result instanceof Checksum);
 		assertEquals(ID1, result.getId());
-		ModelObjectV2 result2 = SpdxModelFactory.getModelObjectV2(modelStore, DOCUMENT_URI, ID1, 
+		ModelObjectV2 result2 = SpdxModelFactoryCompatV2.getModelObjectV2(modelStore, DOCUMENT_URI, ID1, 
 				SpdxConstantsCompatV2.CLASS_SPDX_CHECKSUM, copyManager, false);
 		assertTrue(result2 instanceof Checksum);
 		assertEquals(ID1, result2.getId());
 		try {
-			result = SpdxModelFactory.getModelObjectV2(modelStore, DOCUMENT_URI, ID2, 
+			result = SpdxModelFactoryCompatV2.getModelObjectV2(modelStore, DOCUMENT_URI, ID2, 
 					SpdxConstantsCompatV2.CLASS_SPDX_CHECKSUM, copyManager, false);
 			fail("Expected objectUri not found exception");
 		} catch(SpdxIdNotFoundException ex) {
@@ -75,15 +75,15 @@ public class SpdxModelFactoryTest extends TestCase {
 	}
 
 	public void testGetModelObjectIModelStoreStringStringModelCopyManagerV2() throws InvalidSPDXAnalysisException {
-		ModelObjectV2 result = SpdxModelFactory.getModelObjectV2(modelStore, DOCUMENT_URI, ID1, 
+		ModelObjectV2 result = SpdxModelFactoryCompatV2.getModelObjectV2(modelStore, DOCUMENT_URI, ID1, 
 				SpdxConstantsCompatV2.CLASS_SPDX_CHECKSUM, copyManager, true);
 		assertTrue(result instanceof Checksum);
 		assertEquals(ID1, result.getId());
-		Optional<ModelObjectV2> result2 = SpdxModelFactory.getModelObjectV2(modelStore, DOCUMENT_URI, ID1, copyManager);
+		Optional<ModelObjectV2> result2 = SpdxModelFactoryCompatV2.getModelObjectV2(modelStore, DOCUMENT_URI, ID1, copyManager);
 		assertTrue(result2.isPresent());
 		assertTrue(result2.get() instanceof Checksum);
 		assertEquals(ID1, result2.get().getId());
-		result2 = SpdxModelFactory.getModelObjectV2(modelStore, DOCUMENT_URI, ID2, copyManager);
+		result2 = SpdxModelFactoryCompatV2.getModelObjectV2(modelStore, DOCUMENT_URI, ID2, copyManager);
 		assertFalse(result2.isPresent());
 	}
 

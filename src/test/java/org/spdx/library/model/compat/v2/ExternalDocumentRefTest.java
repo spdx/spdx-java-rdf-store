@@ -30,7 +30,7 @@ import org.spdx.library.model.v2.ExternalDocumentRef;
 import org.spdx.library.model.v2.GenericModelObject;
 import org.spdx.library.model.v2.SpdxConstantsCompatV2;
 import org.spdx.library.model.v2.SpdxDocument;
-import org.spdx.library.model.v2.SpdxModelFactory;
+import org.spdx.library.model.v2.SpdxModelFactoryCompatV2;
 import org.spdx.library.model.v2.SpdxModelInfoV2_X;
 import org.spdx.library.model.v2.Version;
 import org.spdx.library.model.v2.enumerations.ChecksumAlgorithm;
@@ -177,7 +177,7 @@ public class ExternalDocumentRefTest extends TestCase {
 	
 	public void testGetExternalDocRefByDocNamespace() throws InvalidSPDXAnalysisException {
 		// need a document to tie the external refs to
-		SpdxModelFactory.createModelObjectV2(gmo.getModelStore(), gmo.getDocumentUri(), 
+		SpdxModelFactoryCompatV2.createModelObjectV2(gmo.getModelStore(), gmo.getDocumentUri(), 
 				SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, gmo.getCopyManager());
 		// test empty
 		Optional<ExternalDocumentRef> result = ExternalDocumentRef.getExternalDocRefByDocNamespace(gmo.getModelStore(), gmo.getDocumentUri(), 

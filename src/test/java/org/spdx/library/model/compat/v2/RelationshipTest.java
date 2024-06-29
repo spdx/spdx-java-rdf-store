@@ -40,7 +40,7 @@ import org.spdx.library.model.v2.SpdxConstantsCompatV2;
 import org.spdx.library.model.v2.SpdxDocument;
 import org.spdx.library.model.v2.SpdxElement;
 import org.spdx.library.model.v2.SpdxFile;
-import org.spdx.library.model.v2.SpdxModelFactory;
+import org.spdx.library.model.v2.SpdxModelFactoryCompatV2;
 import org.spdx.library.model.v2.SpdxModelInfoV2_X;
 import org.spdx.library.model.v2.SpdxPackage;
 import org.spdx.library.model.v2.Version;
@@ -237,7 +237,7 @@ public class RelationshipTest extends TestCase {
 		String documentUri = "https://someuri";
         IModelCopyManager copyManager = new ModelCopyManager();
         IModelStore modelStore = new RdfStore(documentUri);
-        SpdxDocument document = SpdxModelFactory.createSpdxDocumentV2(modelStore, documentUri, copyManager);
+        SpdxDocument document = SpdxModelFactoryCompatV2.createSpdxDocumentV2(modelStore, documentUri, copyManager);
         document.setSpecVersion(Version.TWO_POINT_THREE_VERSION);
         document.setName("SPDX-tool-test");
         Checksum sha1Checksum = Checksum.create(modelStore, documentUri, ChecksumAlgorithm.SHA1, "d6a770ba38583ed4bb4525bd96e50461655d2758");

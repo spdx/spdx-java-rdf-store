@@ -74,7 +74,7 @@ import org.spdx.core.SpdxInvalidTypeException;
 import org.spdx.core.TypedValue;
 import org.spdx.library.ListedLicenses;
 import org.spdx.library.model.v2.SpdxConstantsCompatV2;
-import org.spdx.library.model.v2.SpdxModelFactory;
+import org.spdx.library.model.v2.SpdxModelFactoryCompatV2;
 import org.spdx.library.model.v3.SpdxEnumFactory;
 import org.spdx.library.referencetype.ListedReferenceTypes;
 import org.spdx.storage.IModelStore.IdType;
@@ -1080,7 +1080,7 @@ public class RdfSpdxModelManager implements IModelStoreLock {
 					idClass.getURI(), property.getURI());
 			if (!classUriRestrictions.isEmpty()) {
 				for (String classUriRestriction:classUriRestrictions) {
-					if (!clazz.isAssignableFrom(SpdxModelFactory.classUriToClass(classUriRestriction))) {
+					if (!clazz.isAssignableFrom(SpdxModelFactoryCompatV2.classUriToClass(classUriRestriction))) {
 						return false;
 					}
 				}
@@ -1152,7 +1152,7 @@ public class RdfSpdxModelManager implements IModelStoreLock {
 				if (value.isPresent() && !clazz.isAssignableFrom(value.get().getClass())) {
 					if (value.get() instanceof TypedValue) {
 						try {
-							if (!clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)value.get()).getType()))) {
+							if (!clazz.isAssignableFrom(SpdxModelFactoryCompatV2.typeToClass(((TypedValue)value.get()).getType()))) {
 								return false;
 							}
 						} catch (InvalidSPDXAnalysisException e) {
@@ -1216,7 +1216,7 @@ public class RdfSpdxModelManager implements IModelStoreLock {
 				}
 				if (objectValue.get() instanceof TypedValue) {
 					try {
-						return clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)objectValue.get()).getType()));
+						return clazz.isAssignableFrom(SpdxModelFactoryCompatV2.typeToClass(((TypedValue)objectValue.get()).getType()));
 					} catch (InvalidSPDXAnalysisException e) {
 						logger.error("Error converting typed value to class",e);
 						return false;
@@ -1342,11 +1342,11 @@ public class RdfSpdxModelManager implements IModelStoreLock {
 				if (Objects.isNull(idClass)) {
 					return Optional.empty();
 				}
-				Class<?> clazz = SpdxModelFactory.classUriToClass(idClass.getURI());
+				Class<?> clazz = SpdxModelFactoryCompatV2.classUriToClass(idClass.getURI());
 				if (Objects.isNull(clazz)) {
 					return Optional.empty();
 				}
-				String type = SpdxModelFactory.SPDX_CLASS_TO_TYPE.get(clazz);
+				String type = SpdxModelFactoryCompatV2.SPDX_CLASS_TO_TYPE.get(clazz);
 				if (Objects.isNull(type)) {
 					return Optional.empty();
 				}

@@ -26,7 +26,7 @@ import org.spdx.library.model.v2.SpdxConstantsCompatV2;
 import org.spdx.library.model.v2.SpdxDocument;
 import org.spdx.library.model.v2.SpdxElement;
 import org.spdx.library.model.v2.SpdxFile;
-import org.spdx.library.model.v2.SpdxModelFactory;
+import org.spdx.library.model.v2.SpdxModelFactoryCompatV2;
 import org.spdx.library.model.v2.SpdxModelInfoV2_X;
 import org.spdx.library.model.v2.SpdxPackage;
 import org.spdx.library.model.v2.enumerations.RelationshipType;
@@ -93,10 +93,10 @@ public class RdfStoreTest extends TestCase {
 	 */
 	public void testGetAllItems() throws InvalidSPDXAnalysisException {
 		RdfStore rdfStore = new RdfStore(DOCUMENT_URI1);
-		SpdxModelFactory.createModelObjectV2(rdfStore, DOCUMENT_URI1, SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, null);
-		SpdxModelFactory.createModelObjectV2(rdfStore, DOCUMENT_URI1, ID_2, SpdxConstantsCompatV2.CLASS_SPDX_FILE, null);
-		SpdxModelFactory.createModelObjectV2(rdfStore, DOCUMENT_URI1, ID_3, SpdxConstantsCompatV2.CLASS_SPDX_FILE, null);
-		SpdxModelFactory.createModelObjectV2(rdfStore, DOCUMENT_URI1, ID_4, SpdxConstantsCompatV2.CLASS_SPDX_FILE, null);
+		SpdxModelFactoryCompatV2.createModelObjectV2(rdfStore, DOCUMENT_URI1, SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, null);
+		SpdxModelFactoryCompatV2.createModelObjectV2(rdfStore, DOCUMENT_URI1, ID_2, SpdxConstantsCompatV2.CLASS_SPDX_FILE, null);
+		SpdxModelFactoryCompatV2.createModelObjectV2(rdfStore, DOCUMENT_URI1, ID_3, SpdxConstantsCompatV2.CLASS_SPDX_FILE, null);
+		SpdxModelFactoryCompatV2.createModelObjectV2(rdfStore, DOCUMENT_URI1, ID_4, SpdxConstantsCompatV2.CLASS_SPDX_FILE, null);
 		try (Stream<TypedValue> result = rdfStore.getAllItems(DOCUMENT_URI1, SpdxConstantsCompatV2.CLASS_SPDX_FILE)) {
 	        final ArrayList<TypedValue> resultList = new ArrayList<>();
             resultList.add(new TypedValue(DOCUMENT_URI1 + "#" + ID_2, SpdxConstantsCompatV2.CLASS_SPDX_FILE, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION));
@@ -127,7 +127,7 @@ public class RdfStoreTest extends TestCase {
 	
 	public void testDelete() throws InvalidSPDXAnalysisException {
 		RdfStore rdfStore = new RdfStore(DOCUMENT_URI1);
-		SpdxModelFactory.createModelObjectV2(rdfStore, DOCUMENT_URI1, SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, null);
+		SpdxModelFactoryCompatV2.createModelObjectV2(rdfStore, DOCUMENT_URI1, SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, null);
 		assertTrue(rdfStore.exists(DOCUMENT_URI1 + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID));
 		rdfStore.delete(DOCUMENT_URI1 + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID);
 		assertFalse(rdfStore.exists(DOCUMENT_URI1 + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID));
@@ -193,7 +193,7 @@ public class RdfStoreTest extends TestCase {
 			 ResultSet result = qe.execSelect();
 			 assertFalse(result.hasNext());
 		}
-		SpdxPackage pkg = (SpdxPackage)SpdxModelFactory.getModelObjectV2(rdfStore, documentUri, "SPDXRef-Package", SpdxConstantsCompatV2.CLASS_SPDX_PACKAGE, null, false);
+		SpdxPackage pkg = (SpdxPackage)SpdxModelFactoryCompatV2.getModelObjectV2(rdfStore, documentUri, "SPDXRef-Package", SpdxConstantsCompatV2.CLASS_SPDX_PACKAGE, null, false);
 		boolean found = false;
 		for (Relationship relationship:pkg.getRelationships()) {
 			if (RelationshipType.CONTAINS.equals(relationship.getRelationshipType()) &&
@@ -215,7 +215,7 @@ public class RdfStoreTest extends TestCase {
 			 ResultSet result = qe.execSelect();
 			 assertFalse(result.hasNext());
 		}
-		SpdxPackage pkg = (SpdxPackage)SpdxModelFactory.getModelObjectV2(rdfStore, documentUri, "SPDXRef-Package", SpdxConstantsCompatV2.CLASS_SPDX_PACKAGE, null, false);
+		SpdxPackage pkg = (SpdxPackage)SpdxModelFactoryCompatV2.getModelObjectV2(rdfStore, documentUri, "SPDXRef-Package", SpdxConstantsCompatV2.CLASS_SPDX_PACKAGE, null, false);
 		boolean found = false;
 		for (Relationship relationship:pkg.getRelationships()) {
 			if (RelationshipType.CONTAINS.equals(relationship.getRelationshipType()) &&
