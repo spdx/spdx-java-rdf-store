@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import javax.annotation.Nullable;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ARQ;
@@ -67,6 +69,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	static Pattern ANON_ID_PATTERN = Pattern.compile(ANON_PREFIX+"(.+)$");
 	RdfSpdxModelManager modelManager;
 	String documentUri;
+	boolean dontStoreLicenseDetails = false;
 	
 	private OutputFormat outputFormat = OutputFormat.XML_ABBREV;
 
@@ -83,6 +86,14 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 */
 	public RdfStore(InputStream stream) throws InvalidSPDXAnalysisException, IOException {
 		deSerialize(stream, false);
+	}
+	
+	/**
+	 * Creates an uninitialized RDF store - the documentUri must be set or a stream deserialized before any other methods are called
+	 */
+	public RdfStore() {
+		this.modelManager = null;
+		this.documentUri = null;
 	}
 	
 	/**
@@ -111,12 +122,54 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	public OutputFormat getOutputFormat() {
 		return outputFormat;
 	}
+	
+	/**
+	 * @return the document URI
+	 */
+	public @Nullable String getDocumentUri() {
+		return this.documentUri;
+	}
+	
+	/**
+	 * @param documentUri document URI to set
+	 * @param overwrite setting a different document URI will overwrite an existing model - this flag will allow it to be overwritten
+	 * @throws InvalidSPDXAnalysisException if the document URI already exists and override is set to false
+	 */
+	public void setDocumentUri(@Nullable String documentUri, boolean overwrite) throws InvalidSPDXAnalysisException {
+		if (Objects.nonNull(this.documentUri) && !overwrite && !Objects.equals(this.documentUri, documentUri)) {
+			throw new InvalidSPDXAnalysisException("Document URI "+this.documentUri+" already exists");
+		}
+		if (!Objects.equals(this.documentUri, documentUri)) {
+			this.documentUri = documentUri;
+			if (Objects.nonNull(documentUri)) {
+				modelManager = createModelManager(documentUri);
+			} else {
+				modelManager = null;
+			}
+		}
+	}
 
 	/**
 	 * @param outputFormat the outputFormat to set
 	 */
 	public void setOutputFormat(OutputFormat outputFormat) {
 		this.outputFormat = outputFormat;
+	}
+	
+	
+
+	/**
+	 * @return the dontStoreLicenseDetails - if true, listed license properties will not be stored in the RDF store
+	 */
+	public boolean isDontStoreLicenseDetails() {
+		return dontStoreLicenseDetails;
+	}
+
+	/**
+	 * @param dontStoreLicenseDetails the dontStoreLicenseDetails to set - if true, listed license properties will not be stored in the RDF store
+	 */
+	public void setDontStoreLicenseDetails(boolean dontStoreLicenseDetails) {
+		this.dontStoreLicenseDetails = dontStoreLicenseDetails;
 	}
 
 	/* (non-Javadoc)
@@ -237,8 +290,20 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		checkClosed();
 		Objects.requireNonNull(objectUri);
 		Objects.requireNonNull(prop);
+		if (isListedLicenseOrException(objectUri) && dontStoreLicenseDetails) {
+			return;
+		}
 		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
 		modelManager.setValue(id, prop.getName(), value);
+	}
+
+	/**
+	 * @param objectUri URI or temp ID of an SPDX object
+	 * @return true if the object URI is associated with a listed license or a listed exception
+	 */
+	private boolean isListedLicenseOrException(String objectUri) {
+		return Objects.isNull(objectUri) || objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX) ||
+				objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_URL);
 	}
 
 	/* (non-Javadoc)
@@ -280,10 +345,9 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 * @see org.spdx.storage.IModelStore#getAllItems(java.lang.String, java.util.Optional)
 	 */
 	@Override
-	public Stream<TypedValue> getAllItems(String documentUri, String typeFilter)
+	public Stream<TypedValue> getAllItems(@Nullable String prefix, String typeFilter)
 			throws InvalidSPDXAnalysisException {
 		checkClosed();
-		Objects.requireNonNull(documentUri, "Missing required document URI");
 		return modelManager.getAllItems(typeFilter);
 	}
 
@@ -296,6 +360,9 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		Objects.requireNonNull(objectUri, "Missing required object URI");
 		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
 		Objects.requireNonNull(value, "Mising required value");
+		if (isListedLicenseOrException(objectUri) && dontStoreLicenseDetails) {
+			return false;
+		}
 		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
 		return modelManager.removeValueFromCollection(id, propertyDescriptor.getName(), value);
 	}
@@ -344,6 +411,9 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		Objects.requireNonNull(objectUri, "Missing required Object URI");
 		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
 		checkClosed();
+		if (isListedLicenseOrException(objectUri) && dontStoreLicenseDetails) {
+			return false;
+		}
 		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
 		return modelManager.addValueToCollection(id, propertyDescriptor.getName(), value);
 	}
