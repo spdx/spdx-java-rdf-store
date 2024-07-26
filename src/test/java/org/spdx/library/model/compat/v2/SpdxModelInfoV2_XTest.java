@@ -70,12 +70,12 @@ public class SpdxModelInfoV2_XTest {
 	public void testCreateExternalElement() throws InvalidSPDXAnalysisException {
 		// external license
 		String licenseUri = "http://prefix#" + SpdxConstantsCompatV2.NON_STD_LICENSE_ID_PRENUM + "test";
-		CoreModelObject external = modelInfo.createExternalElement(modelStore, licenseUri, copyManager, Version.TWO_POINT_THREE_VERSION);
+		CoreModelObject external = modelInfo.createExternalElement(modelStore, licenseUri, copyManager, null, Version.TWO_POINT_THREE_VERSION);
 		assertTrue(external instanceof ExternalExtractedLicenseInfo);
 		assertEquals(licenseUri, external.getObjectUri());
 		// external license
 		String elementUri = "http://prefix#" + SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM + "test";
-		external = modelInfo.createExternalElement(modelStore, elementUri, copyManager, Version.TWO_POINT_THREE_VERSION);
+		external = modelInfo.createExternalElement(modelStore, elementUri, copyManager, null, Version.TWO_POINT_THREE_VERSION);
 		assertTrue(external instanceof ExternalSpdxElement);
 		assertEquals(elementUri, external.getObjectUri());
 	}
