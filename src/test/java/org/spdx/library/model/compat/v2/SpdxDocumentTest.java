@@ -51,7 +51,7 @@ import org.spdx.library.model.v2.license.AnyLicenseInfo;
 import org.spdx.library.model.v2.license.ExtractedLicenseInfo;
 import org.spdx.library.model.v2.license.SimpleLicensingInfo;
 import org.spdx.library.model.v2.license.SpdxListedLicense;
-import org.spdx.library.model.v3.SpdxModelInfoV3_0;
+import org.spdx.library.model.v3_0_0.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
 import org.spdx.storage.CompatibleModelStoreWrapper;
 import org.spdx.storage.IModelStore;

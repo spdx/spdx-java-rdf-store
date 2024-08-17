@@ -75,7 +75,7 @@ import org.spdx.core.TypedValue;
 import org.spdx.library.ListedLicenses;
 import org.spdx.library.model.v2.SpdxConstantsCompatV2;
 import org.spdx.library.model.v2.SpdxModelFactoryCompatV2;
-import org.spdx.library.model.v3.SpdxEnumFactory;
+import org.spdx.library.model.v3_0_0.SpdxEnumFactory;
 import org.spdx.library.referencetype.ListedReferenceTypes;
 import org.spdx.storage.IModelStore.IdType;
 import org.spdx.storage.PropertyDescriptor;
