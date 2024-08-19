@@ -42,10 +42,13 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spdx.core.CoreModelObject;
 import org.spdx.core.DuplicateSpdxIdException;
 import org.spdx.core.InvalidSPDXAnalysisException;
 import org.spdx.core.TypedValue;
+import org.spdx.library.SpdxModelFactory;
 import org.spdx.library.model.v2.SpdxConstantsCompatV2;
+import org.spdx.library.model.v2.SpdxDocument;
 import org.spdx.storage.CompatibleModelStoreWrapper;
 import org.spdx.storage.IModelStore;
 import org.spdx.storage.ISerializableModelStore;
@@ -500,8 +503,8 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		    throw new FileNotFoundException(fileNameOrUrl + " not found.");
 		}
 		try {
-			deSerialize(spdxRdfInput, overwrite);
-			return this.documentUri;
+			SpdxDocument doc = deSerialize(spdxRdfInput, overwrite);
+			return doc.getDocumentUri();
 		} finally {
 			try {
 				spdxRdfInput.close();
@@ -569,9 +572,25 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		checkClosed();
 		modelManager.serialize(stream, outputFormat);
 	}
+	
+	@Override
+	public void serialize(OutputStream stream, @Nullable CoreModelObject spdxDocument) throws InvalidSPDXAnalysisException, IOException {
+		checkClosed();
+		if (Objects.nonNull(spdxDocument)) {
+			if (!(spdxDocument instanceof SpdxDocument)) {
+				logger.error("Attempting to serialize "+spdxDocument.getClass().getName()+" which is not an SpdxDocument");
+				throw new InvalidSPDXAnalysisException("Attempting to serialize "+spdxDocument.getClass().getName()+" which is not an SpdxDocument");
+			}
+			if (!this.documentUri.equals(((SpdxDocument)spdxDocument).getDocumentUri())) {
+				logger.error(((SpdxDocument)spdxDocument).getDocumentUri() + " not found in model store");
+				throw new InvalidSPDXAnalysisException(((SpdxDocument)spdxDocument).getDocumentUri() + " not found in model store");
+			}
+		}
+		modelManager.serialize(stream, outputFormat);
+	}
 
 	@Override
-	public void deSerialize(InputStream stream, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
+	public SpdxDocument deSerialize(InputStream stream, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
 		Model model = ModelFactory.createDefaultModel();
 		model.read(stream, null, this.outputFormat.getType());
 		List<String> documentNamespaces = getDocumentNamespaces(model);
@@ -592,6 +611,16 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		}
 		this.modelManager = new RdfSpdxModelManager(documentNamespace, model);
 		this.documentUri = documentNamespace;
+		
+		@SuppressWarnings("unchecked")
+		Stream<SpdxDocument> documentStream = (Stream<SpdxDocument>)SpdxModelFactory.getSpdxObjects(this, null, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, 
+				documentNamespace + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, documentNamespace);
+		List<SpdxDocument> documents = documentStream.collect(Collectors.toList());
+		if (documents.isEmpty()) {
+			logger.error("No SPDX document found in file");;
+			throw new InvalidSPDXAnalysisException("No SPDX document was found in file");
+		}
+		return documents.get(0);
 	}
 	
 	

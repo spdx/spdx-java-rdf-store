@@ -3,8 +3,10 @@
  */
 package org.spdx.spdxRdfStore;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -16,6 +18,7 @@ import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.riot.RDFDataMgr;
 import org.spdx.core.InvalidSPDXAnalysisException;
 import org.spdx.core.ModelRegistry;
 import org.spdx.core.TypedValue;
@@ -227,5 +230,25 @@ public class RdfStoreTest extends TestCase {
 		}
 		assertTrue(found);
 	}
-
+	
+	public void testSerializeDeserialize() throws Exception {
+		try (RdfStore rdfStore = new RdfStore()) {
+			SpdxDocument result = null;
+			try (InputStream spdxRdfInput = RDFDataMgr.open(TEST_FILE_NAME)) {
+				result = rdfStore.deSerialize(spdxRdfInput, false);
+				assertEquals("http://spdx.org/spdxdocs/spdx-example-444504E0-4F89-41D3-9A0C-0305E82C3301", result.getDocumentUri());
+				assertEquals("http://spdx.org/spdxdocs/spdx-example-444504E0-4F89-41D3-9A0C-0305E82C3301", rdfStore.getDocumentUri());
+				List<String> verify = result.verify();
+				assertTrue(verify.isEmpty());
+			}
+			try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+				rdfStore.serialize(output);
+				assertTrue(output.size() > 0);
+			}
+			try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+				rdfStore.serialize(output, result);
+				assertTrue(output.size() > 0);
+			}
+		}
+	}
 }
