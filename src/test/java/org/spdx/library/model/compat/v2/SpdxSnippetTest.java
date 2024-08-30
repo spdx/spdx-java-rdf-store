@@ -45,7 +45,7 @@ import org.spdx.library.model.v2.license.SpdxListedLicense;
 import org.spdx.library.model.v2.pointer.ByteOffsetPointer;
 import org.spdx.library.model.v2.pointer.LineCharPointer;
 import org.spdx.library.model.v2.pointer.StartEndPointer;
-import org.spdx.library.model.v3_0_0.SpdxModelInfoV3_0;
+import org.spdx.library.model.v3_0_1.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
 import org.spdx.storage.IModelStore.IdType;
 
