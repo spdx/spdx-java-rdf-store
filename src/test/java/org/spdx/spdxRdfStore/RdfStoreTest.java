@@ -34,7 +34,7 @@ import org.spdx.library.model.v2.SpdxModelInfoV2_X;
 import org.spdx.library.model.v2.SpdxPackage;
 import org.spdx.library.model.v2.enumerations.RelationshipType;
 import org.spdx.library.model.v3_0_1.SpdxModelInfoV3_0;
-import org.spdx.storage.CompatibleModelStoreWrapper;
+import org.spdx.storage.compatv2.CompatibleModelStoreWrapper;
 
 import junit.framework.TestCase;
 

@@ -49,10 +49,10 @@ import org.spdx.core.TypedValue;
 import org.spdx.library.SpdxModelFactory;
 import org.spdx.library.model.v2.SpdxConstantsCompatV2;
 import org.spdx.library.model.v2.SpdxDocument;
-import org.spdx.storage.CompatibleModelStoreWrapper;
 import org.spdx.storage.IModelStore;
 import org.spdx.storage.ISerializableModelStore;
 import org.spdx.storage.PropertyDescriptor;
+import org.spdx.storage.compatv2.CompatibleModelStoreWrapper;
 
 /**
  * Model Store implemented using RDF

@@ -78,7 +78,7 @@ import org.spdx.library.model.v2.SpdxModelFactoryCompatV2;
 import org.spdx.library.model.v3_0_1.SpdxEnumFactory;
 import org.spdx.library.referencetype.ListedReferenceTypes;
 import org.spdx.storage.IModelStore.IdType;
-import org.spdx.storage.CompatibleModelStoreWrapper;
+import org.spdx.storage.compatv2.CompatibleModelStoreWrapper;
 import org.spdx.storage.IModelStore.IModelStoreLock;
 
 /**
