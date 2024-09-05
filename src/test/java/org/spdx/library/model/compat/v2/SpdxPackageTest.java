@@ -1,3 +1,4 @@
+package org.spdx.library.model.compat.v2;
 /**
  * Copyright (c) 2019 Source Auditor Inc.
  *
@@ -15,27 +16,43 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package org.spdx.library.model;
+
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 
-import org.spdx.library.DefaultModelStore;
-import org.spdx.library.InvalidSPDXAnalysisException;
+import org.spdx.core.DefaultModelStore;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
 import org.spdx.library.ModelCopyManager;
-import org.spdx.library.SpdxConstants;
-import org.spdx.library.Version;
-import org.spdx.library.model.enumerations.AnnotationType;
-import org.spdx.library.model.enumerations.ChecksumAlgorithm;
-import org.spdx.library.model.enumerations.FileType;
-import org.spdx.library.model.enumerations.Purpose;
-import org.spdx.library.model.enumerations.ReferenceCategory;
-import org.spdx.library.model.enumerations.RelationshipType;
-import org.spdx.library.model.license.AnyLicenseInfo;
-import org.spdx.library.model.license.ExtractedLicenseInfo;
+import org.spdx.library.model.v2.Annotation;
+import org.spdx.library.model.v2.Checksum;
+import org.spdx.library.model.v2.ExternalRef;
+import org.spdx.library.model.v2.GenericModelObject;
+import org.spdx.library.model.v2.GenericSpdxElement;
+import org.spdx.library.model.v2.ReferenceType;
+import org.spdx.library.model.v2.Relationship;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
+import org.spdx.library.model.v2.SpdxElement;
+import org.spdx.library.model.v2.SpdxFile;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v2.SpdxPackage;
+import org.spdx.library.model.v2.SpdxPackageVerificationCode;
+import org.spdx.library.model.v2.Version;
+import org.spdx.library.model.v2.enumerations.AnnotationType;
+import org.spdx.library.model.v2.enumerations.ChecksumAlgorithm;
+import org.spdx.library.model.v2.enumerations.FileType;
+import org.spdx.library.model.v2.enumerations.Purpose;
+import org.spdx.library.model.v2.enumerations.ReferenceCategory;
+import org.spdx.library.model.v2.enumerations.RelationshipType;
+import org.spdx.library.model.v2.license.AnyLicenseInfo;
+import org.spdx.library.model.v2.license.ExtractedLicenseInfo;
+import org.spdx.library.model.v3_0_1.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
 import org.spdx.storage.IModelStore.IdType;
 
@@ -71,7 +88,8 @@ public class SpdxPackageTest extends TestCase {
 	static final String VERSION1 = "V1";
 	static final String VERSION2 = "V2";
 	
-	static final String DATE_NOW = new SimpleDateFormat(SpdxConstants.SPDX_DATE_FORMAT).format(new Date());
+	static final String DATE_NOW = new SimpleDateFormat(SpdxConstantsCompatV2.SPDX_DATE_FORMAT).format(new Date());
+	static final String DATE_THEN = new SimpleDateFormat(SpdxConstantsCompatV2.SPDX_DATE_FORMAT).format(new GregorianCalendar(2021, Calendar.JANUARY, 11).getTime());
 	
 	SpdxElement RELATED_ELEMENT1;
 	SpdxElement RELATED_ELEMENT2;
@@ -115,7 +133,9 @@ public class SpdxPackageTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
-		DefaultModelStore.reset(new RdfStore(), "http://test.document.uri/1", new ModelCopyManager());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
+		DefaultModelStore.initialize(new RdfStore("http://defaultdocument"), "http://defaultdocument", new ModelCopyManager());
 		gmo = new GenericModelObject();
 		CHECKSUM1 = gmo.createChecksum(ChecksumAlgorithm.SHA1, 
 				"2fd4e1c67a2d28fced849ee1bb76e7391b93eb12");
@@ -139,7 +159,7 @@ public class SpdxPackageTest extends TestCase {
 		LICENSE2 = new ExtractedLicenseInfo("LicenseRef-2", "License Text 2");
 		LICENSE3 = new ExtractedLicenseInfo("LicenseRef-3", "License Text 3");
 		
-		FILE1 = gmo.createSpdxFile(gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri()), 
+		FILE1 = gmo.createSpdxFile(gmo.getModelStore().getNextId(IdType.SpdxId), 
 				"FileName1", LICENSE1, Arrays.asList(new AnyLicenseInfo[] {LICENSE2}), 
 				COPYRIGHT_TEXT1, CHECKSUM1)
 				.setComment("File Comment1")
@@ -149,7 +169,7 @@ public class SpdxPackageTest extends TestCase {
 				.setNoticeText("NoticeText1")
 				.build();
 				
-		FILE2 = gmo.createSpdxFile(gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri()), 
+		FILE2 = gmo.createSpdxFile(gmo.getModelStore().getNextId(IdType.SpdxId), 
 				"FileName2", LICENSE2, Arrays.asList(new AnyLicenseInfo[] {LICENSE1, LICENSE2}), 
 				COPYRIGHT_TEXT2, CHECKSUM4)
 				.setComment("File Comment2")
@@ -170,8 +190,8 @@ public class SpdxPackageTest extends TestCase {
 		RELATIONSHIP2 = gmo.createRelationship(RELATED_ELEMENT2, 
 				RelationshipType.DYNAMIC_LINK, "Relationship Comment2");
 		
-		REF_TYPE1 = new ReferenceType(SpdxConstants.SPDX_LISTED_REFERENCE_TYPES_PREFIX + "npm");
-		REF_TYPE2 = new ReferenceType(SpdxConstants.SPDX_LISTED_REFERENCE_TYPES_PREFIX + "cpe23Type");
+		REF_TYPE1 = new ReferenceType(SpdxConstantsCompatV2.SPDX_LISTED_REFERENCE_TYPES_PREFIX + "npm");
+		REF_TYPE2 = new ReferenceType(SpdxConstantsCompatV2.SPDX_LISTED_REFERENCE_TYPES_PREFIX + "cpe23Type");
 		EXTERNAL_REF1 = gmo.createExternalRef(ReferenceCategory.PACKAGE_MANAGER,
 				REF_TYPE1, "locator1", "comment1");
 		EXTERNAL_REF2 = gmo.createExternalRef(ReferenceCategory.SECURITY, REF_TYPE2, "locator1", "comment2");
@@ -185,7 +205,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#verify()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#verify()}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testVerify() throws InvalidSPDXAnalysisException {
@@ -194,7 +214,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -222,15 +242,15 @@ public class SpdxPackageTest extends TestCase {
 		assertEquals(0, result.size());
 		// verification code
 		pkg.setPackageVerificationCode(null);
-		assertEquals(0, pkg.verify().size());
+		assertEquals(1, pkg.verify().size());
 		
 		// Make sure no files are allowed when filesAnalyzed is false
 		pkg.setFilesAnalyzed(false);
-		assertEquals(2, pkg.verify().size());
+		assertEquals(1, pkg.verify().size());
 		
 		//Make sure we're valid with no files and no verification code when filesAnalyzed = false.
 		pkg.getFiles().clear();
-		assertEquals(1, pkg.verify().size());	
+		assertEquals(0, pkg.verify().size());	
 	}
 	
 	public void testEquivalent() throws InvalidSPDXAnalysisException {
@@ -239,8 +259,8 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id1 = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
-		String id2 = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id1 = gmo.getModelStore().getNextId(IdType.SpdxId);
+		String id2 = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id1, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -372,7 +392,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setFilesAnalyzed(java.lang.Boolean)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setFilesAnalyzed(java.lang.Boolean)}.
 	 */
 	public void testSetFilesAnalyzed() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -380,7 +400,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -413,7 +433,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setLicenseDeclared(org.spdx.library.model.license.AnyLicenseInfo)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setLicenseDeclared(org.spdx.library.model.compat.v2.compat.v2.license.AnyLicenseInfo)}.
 	 */
 	public void testSetLicenseDeclared() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -421,7 +441,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -455,7 +475,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#addChecksum(org.spdx.library.model.Checksum)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#addChecksum(org.spdx.library.model.compat.v2.compat.v2.Checksum)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testAddChecksum() throws InvalidSPDXAnalysisException {
@@ -463,7 +483,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Relationship> relationships = Arrays.asList(new Relationship[] {RELATIONSHIP1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -506,7 +526,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setDescription(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setDescription(java.lang.String)}.
 	 */
 	public void testSetDescription() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -514,7 +534,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -548,7 +568,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setDownloadLocation(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setDownloadLocation(java.lang.String)}.
 	 */
 	public void testSetDownloadLocation() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -556,7 +576,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -590,7 +610,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setHomepage(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setHomepage(java.lang.String)}.
 	 */
 	public void testSetHomepage() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -598,7 +618,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -632,7 +652,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setOriginator(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setOriginator(java.lang.String)}.
 	 */
 	public void testSetOriginator() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -640,7 +660,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -674,7 +694,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setPackageFileName(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setPackageFileName(java.lang.String)}.
 	 */
 	public void testSetPackageFileName() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -682,7 +702,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -715,7 +735,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setPackageVerificationCode(org.spdx.library.model.SpdxPackageVerificationCode)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setPackageVerificationCode(org.spdx.library.model.compat.v2.compat.v2.SpdxPackageVerificationCode)}.
 	 */
 	public void testSetPackageVerificationCode() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -723,7 +743,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -756,7 +776,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setSourceInfo(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setSourceInfo(java.lang.String)}.
 	 */
 	public void testSetSourceInfo() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -764,7 +784,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -797,7 +817,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setSummary(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setSummary(java.lang.String)}.
 	 */
 	public void testSetSummary() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -805,7 +825,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -838,7 +858,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setSupplier(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setSupplier(java.lang.String)}.
 	 */
 	public void testSetSupplier() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -846,7 +866,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -879,7 +899,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#setVersionInfo(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#setVersionInfo(java.lang.String)}.
 	 */
 	public void testSetVersionInfo() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -887,7 +907,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -920,7 +940,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#addExternalRef(org.spdx.library.model.ExternalRef)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#addExternalRef(org.spdx.library.model.compat.v2.compat.v2.ExternalRef)}.
 	 */
 	public void testAddExternalRef() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -928,7 +948,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs1 = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		List<ExternalRef> externalRefs2 = Arrays.asList(new ExternalRef[] {EXTERNAL_REF2, EXTERNAL_REF1});
 		
@@ -962,7 +982,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#addFile(org.spdx.library.model.SpdxFile)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#addFile(org.spdx.library.model.compat.v2.compat.v2.SpdxFile)}.
 	 */
 	public void testAddFile() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -970,7 +990,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -1002,7 +1022,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#compareTo(org.spdx.library.model.SpdxPackage)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#compareTo(org.spdx.library.model.compat.v2.compat.v2.SpdxPackage)}.
 	 */
 	public void testCompareTo() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -1012,7 +1032,7 @@ public class SpdxPackageTest extends TestCase {
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
-		SpdxPackage pkg = gmo.createPackage(gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri()),
+		SpdxPackage pkg = gmo.createPackage(gmo.getModelStore().getNextId(IdType.SpdxId),
 				PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
 				.setChecksums(checksums)
 				.setComment(PKG_COMMENT1)
@@ -1034,7 +1054,7 @@ public class SpdxPackageTest extends TestCase {
 				.setExternalRefs(externalRefs)
 				.build();
 		
-		SpdxPackage sameName = gmo.createPackage(gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri()),
+		SpdxPackage sameName = gmo.createPackage(gmo.getModelStore().getNextId(IdType.SpdxId),
 				PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
 				.setChecksums(checksums)
 				.setComment(PKG_COMMENT1)
@@ -1056,7 +1076,7 @@ public class SpdxPackageTest extends TestCase {
 				.setExternalRefs(externalRefs)
 				.build();
 		
-		SpdxPackage pkg3 = gmo.createPackage(gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri()),
+		SpdxPackage pkg3 = gmo.createPackage(gmo.getModelStore().getNextId(IdType.SpdxId),
 				PKG_NAME2, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
 				.setChecksums(checksums)
 				.setComment(PKG_COMMENT1)
@@ -1085,7 +1105,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackage#getSha1()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackage#getSha1()}.
 	 */
 	public void testGetSha1() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -1093,7 +1113,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -1128,7 +1148,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxItem#setLicenseConcluded(org.spdx.library.model.license.AnyLicenseInfo)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxItem#setLicenseConcluded(org.spdx.library.model.compat.v2.compat.v2.license.AnyLicenseInfo)}.
 	 */
 	public void testSetLicenseConcluded() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -1136,7 +1156,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -1168,7 +1188,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxItem#setCopyrightText(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxItem#setCopyrightText(java.lang.String)}.
 	 */
 	public void testSetCopyrightText() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -1176,7 +1196,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -1209,7 +1229,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxItem#setLicenseComments(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxItem#setLicenseComments(java.lang.String)}.
 	 */
 	public void testSetLicenseComments()  throws InvalidSPDXAnalysisException{
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -1217,7 +1237,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -1250,7 +1270,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxElement#addAnnotation(org.spdx.library.model.Annotation)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxElement#addAnnotation(org.spdx.library.model.compat.v2.compat.v2.Annotation)}.
 	 */
 	public void testAddAnnotation() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations1 = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -1259,7 +1279,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -1292,7 +1312,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxElement#addRelationship(org.spdx.library.model.Relationship)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxElement#addRelationship(org.spdx.library.model.compat.v2.compat.v2.Relationship)}.
 	 */
 	public void testAddRelationship() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -1300,7 +1320,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Relationship> relationships2 = Arrays.asList(new Relationship[] {RELATIONSHIP1, RELATIONSHIP2});
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -1312,7 +1332,6 @@ public class SpdxPackageTest extends TestCase {
 				.setLicenseComments(LICENSE_COMMENT1)
 				.setDescription(DESCRIPTION1)
 				.setDownloadLocation(DOWNLOAD_LOCATION1)
-				.setFilesAnalyzed(false)
 				.setHomepage(HOMEPAGE1)
 				.setOriginator(ORIGINATOR1)
 				.setPackageFileName(PACKAGEFILENAME1)
@@ -1332,7 +1351,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxElement#setComment(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxElement#setComment(java.lang.String)}.
 	 */
 	public void testSetComment() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -1340,7 +1359,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -1378,7 +1397,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		String ATT1 = "attribution 1";
@@ -1418,7 +1437,7 @@ public class SpdxPackageTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxElement#setName(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxElement#setName(java.lang.String)}.
 	 */
 	public void testSetNameString() throws InvalidSPDXAnalysisException {
 		List<Annotation> annotations = Arrays.asList(new Annotation[] {ANNOTATION1});
@@ -1426,7 +1445,7 @@ public class SpdxPackageTest extends TestCase {
 		List<Checksum> checksums = Arrays.asList(new Checksum[] {CHECKSUM2, CHECKSUM3, CHECKSUM1});
 		List<SpdxFile> files = Arrays.asList(new SpdxFile[] {FILE1, FILE2});
 		List<AnyLicenseInfo> licenseFromFiles = Arrays.asList(new AnyLicenseInfo[] {LICENSE2});
-		String id = gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri());
+		String id = gmo.getModelStore().getNextId(IdType.SpdxId);
 		List<ExternalRef> externalRefs = Arrays.asList(new ExternalRef[] {EXTERNAL_REF1});
 		
 		SpdxPackage pkg = gmo.createPackage(id, PKG_NAME1, LICENSE1, COPYRIGHT_TEXT1, LICENSE3)
@@ -1458,11 +1477,32 @@ public class SpdxPackageTest extends TestCase {
 		assertEquals(PKG_NAME2, pkg.getName().get());
 	}
 	
+	public void testDownloadPattern() {
+	    assertTrue(SpdxConstantsCompatV2.DOWNLOAD_LOCATION_PATTERN.matcher(
+	            "git://git.myproject.org/MyProject.git@master").matches());
+       assertTrue(SpdxConstantsCompatV2.DOWNLOAD_LOCATION_PATTERN.matcher(
+               "git://git.myproject.org/MyOrg/MyProject.git@master").matches());
+        assertTrue(SpdxConstantsCompatV2.DOWNLOAD_LOCATION_PATTERN.matcher(
+                "git+git@git.myproject.org:MyProject").matches());
+        assertTrue(SpdxConstantsCompatV2.DOWNLOAD_LOCATION_PATTERN.matcher(
+                "git+git@git.myproject.org:MyOrg/MyProject").matches());
+        assertTrue(SpdxConstantsCompatV2.DOWNLOAD_LOCATION_PATTERN.matcher(
+                "git+git@git.myproject.org:MyProject.git").matches());
+        assertTrue(SpdxConstantsCompatV2.DOWNLOAD_LOCATION_PATTERN.matcher(
+                "git+git@git.myproject.org:MyOrg/MyProject.git").matches());
+        assertTrue(SpdxConstantsCompatV2.DOWNLOAD_LOCATION_PATTERN.matcher(
+                "git+git@git.myproject.org:MyProject@main").matches());
+        assertTrue(SpdxConstantsCompatV2.DOWNLOAD_LOCATION_PATTERN.matcher(
+                "git+git@git.myproject.org:MyProject@6338c7a2525e055a05bae1580e4dd189c2feff7b").matches());
+        assertFalse(SpdxConstantsCompatV2.DOWNLOAD_LOCATION_PATTERN.matcher(
+                "something@git.myproject.org:MyProject@6338c7a2525e055a05bae1580e4dd189c2feff7b").matches());
+	}
+	
 	// Test to verify spec versions prior to 2.3 fail verify for missing license or copyright fields
 	public void testVerify23Fields() throws InvalidSPDXAnalysisException {
 		// previously required fields
 		SpdxPackage pkg = gmo.createPackage(gmo.getModelStore()
-				.getNextId(IdType.SpdxId, gmo.getDocumentUri()), PKG_NAME1, null, null, null)
+				.getNextId(IdType.SpdxId), PKG_NAME1, null, null, null)
 				.setDownloadLocation(DOWNLOAD_LOCATION1)
 				.setFilesAnalyzed(false)
 				.build();
@@ -1473,7 +1513,7 @@ public class SpdxPackageTest extends TestCase {
 		
 		// BuiltDate
 		pkg = gmo.createPackage(gmo.getModelStore()
-				.getNextId(IdType.SpdxId, gmo.getDocumentUri()), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
+				.getNextId(IdType.SpdxId), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
 				.setDownloadLocation(DOWNLOAD_LOCATION1)
 				.setFilesAnalyzed(false)
 				.setBuiltDate(DATE_NOW)
@@ -1483,7 +1523,7 @@ public class SpdxPackageTest extends TestCase {
 		
 		// Release Date
 		pkg = gmo.createPackage(gmo.getModelStore()
-				.getNextId(IdType.SpdxId, gmo.getDocumentUri()), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
+				.getNextId(IdType.SpdxId), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
 				.setDownloadLocation(DOWNLOAD_LOCATION1)
 				.setFilesAnalyzed(false)
 				.setReleaseDate(DATE_NOW)
@@ -1493,7 +1533,7 @@ public class SpdxPackageTest extends TestCase {
 		
 		// Valid Until Date
 		pkg = gmo.createPackage(gmo.getModelStore()
-				.getNextId(IdType.SpdxId, gmo.getDocumentUri()), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
+				.getNextId(IdType.SpdxId), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
 				.setDownloadLocation(DOWNLOAD_LOCATION1)
 				.setFilesAnalyzed(false)
 				.setValidUntilDate(DATE_NOW)
@@ -1503,7 +1543,7 @@ public class SpdxPackageTest extends TestCase {
 		
 		// Primary Purpose
 		pkg = gmo.createPackage(gmo.getModelStore()
-				.getNextId(IdType.SpdxId, gmo.getDocumentUri()), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
+				.getNextId(IdType.SpdxId), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
 				.setDownloadLocation(DOWNLOAD_LOCATION1)
 				.setFilesAnalyzed(false)
 				.setPrimaryPurpose(Purpose.APPLICATION)
@@ -1514,7 +1554,7 @@ public class SpdxPackageTest extends TestCase {
 		// Relationship Type REQUIREMENT_DESCRIPTION_FOR
 		Relationship rel = gmo.createRelationship(FILE1, RelationshipType.REQUIREMENT_DESCRIPTION_FOR, "");
 		pkg = gmo.createPackage(gmo.getModelStore()
-				.getNextId(IdType.SpdxId, gmo.getDocumentUri()), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
+				.getNextId(IdType.SpdxId), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
 				.setDownloadLocation(DOWNLOAD_LOCATION1)
 				.setFilesAnalyzed(false)
 				.addRelationship(rel)
@@ -1525,7 +1565,7 @@ public class SpdxPackageTest extends TestCase {
 		// Relationship Type SPECIFICATION_FOR
 		rel = gmo.createRelationship(FILE1, RelationshipType.SPECIFICATION_FOR, "");
 		pkg = gmo.createPackage(gmo.getModelStore()
-				.getNextId(IdType.SpdxId, gmo.getDocumentUri()), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
+				.getNextId(IdType.SpdxId), PKG_NAME1, LICENSE1, "copyright", LICENSE2)
 				.setDownloadLocation(DOWNLOAD_LOCATION1)
 				.setFilesAnalyzed(false)
 				.addRelationship(rel)
@@ -1533,5 +1573,62 @@ public class SpdxPackageTest extends TestCase {
 		assertEquals(0, pkg.verify().size());
 		assertTrue(pkg.verify(Version.TWO_POINT_ZERO_VERSION).size() > 0);
 				
+	}
+
+	public void testSetPrimaryPurpose() throws InvalidSPDXAnalysisException {
+		SpdxPackage pkg = gmo.createPackage(gmo.getModelStore()
+				.getNextId(IdType.SpdxId), PKG_NAME1, null, null, null)
+				.setDownloadLocation(DOWNLOAD_LOCATION1)
+				.setFilesAnalyzed(false)
+				.setPrimaryPurpose(Purpose.APPLICATION)
+				.build();
+		
+		assertEquals(pkg.getPrimaryPurpose().get(), Purpose.APPLICATION);
+		pkg.setPrimaryPurpose(Purpose.FRAMEWORK);
+		assertEquals(pkg.getPrimaryPurpose().get(), Purpose.FRAMEWORK);
+		pkg.setPrimaryPurpose(null);
+		assertFalse(pkg.getPrimaryPurpose().isPresent());
+	}
+	
+	public void testSetBuiltDate() throws InvalidSPDXAnalysisException {
+		SpdxPackage pkg = gmo.createPackage(gmo.getModelStore()
+				.getNextId(IdType.SpdxId), PKG_NAME1, null, null, null)
+				.setDownloadLocation(DOWNLOAD_LOCATION1)
+				.setFilesAnalyzed(false)
+				.setBuiltDate(DATE_NOW)
+				.build();
+		assertEquals(pkg.getBuiltDate().get(), DATE_NOW);
+		pkg.setBuiltDate(DATE_THEN);
+		assertEquals(pkg.getBuiltDate().get(), DATE_THEN);
+		pkg.setBuiltDate(null);
+		assertFalse(pkg.getBuiltDate().isPresent());
+	}
+	
+	public void testSetValidUntilDate() throws InvalidSPDXAnalysisException {
+		SpdxPackage pkg = gmo.createPackage(gmo.getModelStore()
+				.getNextId(IdType.SpdxId), PKG_NAME1, null, null, null)
+				.setDownloadLocation(DOWNLOAD_LOCATION1)
+				.setFilesAnalyzed(false)
+				.setValidUntilDate(DATE_NOW)
+				.build();
+		assertEquals(pkg.getValidUntilDate().get(), DATE_NOW);
+		pkg.setValidUntilDate(DATE_THEN);
+		assertEquals(pkg.getValidUntilDate().get(), DATE_THEN);
+		pkg.setValidUntilDate(null);
+		assertFalse(pkg.getValidUntilDate().isPresent());
+	}
+	
+	public void testSetReleaseDate() throws InvalidSPDXAnalysisException {
+		SpdxPackage pkg = gmo.createPackage(gmo.getModelStore()
+				.getNextId(IdType.SpdxId), PKG_NAME1, null, null, null)
+				.setDownloadLocation(DOWNLOAD_LOCATION1)
+				.setFilesAnalyzed(false)
+				.setReleaseDate(DATE_NOW)
+				.build();
+		assertEquals(pkg.getReleaseDate().get(), DATE_NOW);
+		pkg.setReleaseDate(DATE_THEN);
+		assertEquals(pkg.getReleaseDate().get(), DATE_THEN);
+		pkg.setReleaseDate(null);
+		assertFalse(pkg.getReleaseDate().isPresent());
 	}
 }

@@ -10,7 +10,7 @@ import java.util.Optional;
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.spdx.library.SpdxConstants;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
 
 import junit.framework.TestCase;
 
@@ -43,22 +43,22 @@ public class SpdxOwlOntologyTest extends TestCase {
 	}
 
 	public void testIsList() throws SpdxRdfException {
-		assertTrue(SpdxOwlOntology.getSpdxOwlOntology().isList(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_FILE,
-				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_FILE_TYPE));
-		assertFalse(SpdxOwlOntology.getSpdxOwlOntology().isList(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_CREATION_INFO,
-				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_CREATION_CREATED));
-		assertFalse(SpdxOwlOntology.getSpdxOwlOntology().isList(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_PACKAGE,
-				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_LICENSE_DECLARED));
+		assertTrue(SpdxOwlOntology.getSpdxOwlOntology().isList(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_FILE,
+				SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_FILE_TYPE.getName()));
+		assertFalse(SpdxOwlOntology.getSpdxOwlOntology().isList(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_CREATION_INFO,
+				SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_CREATION_CREATED.getName()));
+		assertFalse(SpdxOwlOntology.getSpdxOwlOntology().isList(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_PACKAGE,
+				SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_LICENSE_DECLARED.getName()));
 	}
 	
 	public void testClassesInOntology() {
-		for (String className:SpdxConstants.ALL_SPDX_CLASSES) {
-			if (!SpdxConstants.CLASS_NONE_LICENSE.equals(className) && 
-					!SpdxConstants.CLASS_NOASSERTION_LICENSE.equals(className) && 
-					!SpdxConstants.CLASS_EXTERNAL_SPDX_ELEMENT.equals(className) &&
-					!SpdxConstants.CLASS_EXTERNAL_EXTRACTED_LICENSE.equals(className) &&
-					!SpdxConstants.CLASS_SPDX_NONE_ELEMENT.equals(className) &&
-					!SpdxConstants.CLASS_SPDX_NOASSERTION_ELEMENT.equals(className)) {
+		for (String className:SpdxConstantsCompatV2.ALL_SPDX_CLASSES) {
+			if (!SpdxConstantsCompatV2.CLASS_NONE_LICENSE.equals(className) && 
+					!SpdxConstantsCompatV2.CLASS_NOASSERTION_LICENSE.equals(className) && 
+					!SpdxConstantsCompatV2.CLASS_EXTERNAL_SPDX_ELEMENT.equals(className) &&
+					!SpdxConstantsCompatV2.CLASS_EXTERNAL_EXTRACTED_LICENSE.equals(className) &&
+					!SpdxConstantsCompatV2.CLASS_SPDX_NONE_ELEMENT.equals(className) &&
+					!SpdxConstantsCompatV2.CLASS_SPDX_NOASSERTION_ELEMENT.equals(className)) {
 				assertNotNull(className+" not present in ontology.",SpdxOwlOntology.getSpdxOwlOntology().getModel().getOntClass(
 						SpdxResourceFactory.classNameToUri(className)));
 			}
@@ -67,16 +67,16 @@ public class SpdxOwlOntologyTest extends TestCase {
 	
 	public void testGetClassUriRestrictions() throws SpdxRdfException {
 		List<String> result = SpdxOwlOntology.getSpdxOwlOntology().getClassUriRestrictions(
-				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_PACKAGE,
-				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_ANNOTATION);
+				SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_PACKAGE,
+				SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_ANNOTATION.getName());
 		assertEquals(1, result.size());
-		assertEquals(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_ANNOTATION, result.get(0));
+		assertEquals(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_ANNOTATION, result.get(0));
 	}
 	
 	public void testGetDataUriRestrictions() throws SpdxRdfException {
 		List<String> result = SpdxOwlOntology.getSpdxOwlOntology().getDataUriRestrictions(
-				SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_PACKAGE,
-				SpdxConstants.RDFS_NAMESPACE + SpdxConstants.RDFS_PROP_COMMENT);
+				SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_PACKAGE,
+				SpdxConstantsCompatV2.RDFS_NAMESPACE + SpdxConstantsCompatV2.RDFS_PROP_COMMENT.getName());
 		assertEquals(1, result.size());
 		assertEquals("http://www.w3.org/2001/XMLSchema#string", result.get(0));
 	}
@@ -84,23 +84,23 @@ public class SpdxOwlOntologyTest extends TestCase {
 	public void testGetPropertyClass() throws SpdxRdfException {
 		Model model = ModelFactory.createDefaultModel();
 		Optional<Class<? extends Object>> dataClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(
-					model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_COPYRIGHT_TEXT));
+					model.createProperty(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_COPYRIGHT_TEXT.getName()));
 		assertEquals(Optional.of(String.class), dataClass);
 		dataClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(
-				model.createProperty(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_STD_LICENSE_FSF_LIBRE));
+				model.createProperty(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_STD_LICENSE_FSF_LIBRE.getName()));
 	assertEquals(Optional.of(Boolean.class), dataClass);
 	dataClass = SpdxOwlOntology.getSpdxOwlOntology().getPropertyClass(
-			model.createProperty(SpdxConstants.RDF_POINTER_NAMESPACE + SpdxConstants.PROP_POINTER_OFFSET));
+			model.createProperty(SpdxConstantsCompatV2.RDF_POINTER_NAMESPACE + SpdxConstantsCompatV2.PROP_POINTER_OFFSET.getName()));
 	assertEquals(Optional.of(Integer.class), dataClass);
 	}
 	 
 	public void testCheckGetOwlUriFromRenamed() {
-		assertEquals(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_VERSION, 
-				SpdxOwlOntology.checkGetOwlUriFromRenamed(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_SPEC_VERSION));
+		assertEquals(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_SPDX_VERSION.getName(), 
+				SpdxOwlOntology.checkGetOwlUriFromRenamed(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_SPDX_SPEC_VERSION.getName()));
 	}
 	
 	public void testCheckGetRenamedUri() {
-		assertEquals(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_SPEC_VERSION, 
-				SpdxOwlOntology.checkGetRenamedUri(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.PROP_SPDX_VERSION));
+		assertEquals(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_SPDX_SPEC_VERSION.getName(), 
+				SpdxOwlOntology.checkGetRenamedUri(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_SPDX_VERSION.getName()));
 	}
 }

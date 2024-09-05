@@ -1,3 +1,4 @@
+package org.spdx.library.model.compat.v2;
 /**
  * Copyright (c) 2020 Source Auditor Inc.
  *
@@ -15,17 +16,23 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package org.spdx.library.model;
+
 
 import java.util.List;
 
-import org.spdx.library.DefaultModelStore;
-import org.spdx.library.InvalidSPDXAnalysisException;
+import org.spdx.core.DefaultModelStore;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
 import org.spdx.library.ModelCopyManager;
-import org.spdx.library.model.pointer.ByteOffsetPointer;
-import org.spdx.library.model.pointer.LineCharPointer;
-import org.spdx.library.model.pointer.SinglePointer;
-import org.spdx.library.model.pointer.StartEndPointer;
+import org.spdx.library.model.v2.GenericModelObject;
+import org.spdx.library.model.v2.GenericSpdxElement;
+import org.spdx.library.model.v2.SpdxElement;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v2.pointer.ByteOffsetPointer;
+import org.spdx.library.model.v2.pointer.LineCharPointer;
+import org.spdx.library.model.v2.pointer.SinglePointer;
+import org.spdx.library.model.v2.pointer.StartEndPointer;
+import org.spdx.library.model.v3_0_1.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
 
 import junit.framework.TestCase;
@@ -55,7 +62,9 @@ public class StartEndPointerTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
-		DefaultModelStore.reset(new RdfStore(), "http://test.document.uri/1", new ModelCopyManager());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
+		DefaultModelStore.initialize(new RdfStore("http://defaultdocument"), "http://defaultdocument", new ModelCopyManager());
 		gmo = new GenericModelObject();
 		REFERENCED1 = new GenericSpdxElement();
 		REFERENCED1.setName(REFERENCED_ELEMENT_NAME1);
@@ -75,7 +84,7 @@ public class StartEndPointerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.pointer.StartEndPointer#verify()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.pointer.StartEndPointer#verify()}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testVerify() throws InvalidSPDXAnalysisException {
@@ -107,7 +116,7 @@ public class StartEndPointerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.pointer.StartEndPointer#setEndPointer(org.spdx.library.model.pointer.SinglePointer)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.pointer.StartEndPointer#setEndPointer(org.spdx.library.model.compat.v2.compat.v2.pointer.SinglePointer)}.
 	 */
 	public void testSetEndPointer() throws InvalidSPDXAnalysisException {
 		StartEndPointer sop = gmo.createStartEndPointer(BOP_POINTER1, BOP_POINTER2);
@@ -140,7 +149,7 @@ public class StartEndPointerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.pointer.StartEndPointer#setStartPointer(org.spdx.library.model.pointer.SinglePointer)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.pointer.StartEndPointer#setStartPointer(org.spdx.library.model.compat.v2.compat.v2.pointer.SinglePointer)}.
 	 */
 	public void testSetStartPointerSinglePointer() throws InvalidSPDXAnalysisException {
 		StartEndPointer sop = gmo.createStartEndPointer(BOP_POINTER1, BOP_POINTER2);
@@ -159,7 +168,7 @@ public class StartEndPointerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.pointer.StartEndPointer#compareTo(org.spdx.library.model.pointer.StartEndPointer)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.pointer.StartEndPointer#compareTo(org.spdx.library.model.compat.v2.compat.v2.pointer.StartEndPointer)}.
 	 */
 	public void testCompareTo() throws InvalidSPDXAnalysisException {
 		StartEndPointer sop1 = gmo.createStartEndPointer(BOP_POINTER1, BOP_POINTER2);

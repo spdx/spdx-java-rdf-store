@@ -17,7 +17,7 @@
  */
 package org.spdx.spdxRdfStore;
 
-import org.spdx.library.InvalidSPDXAnalysisException;
+import org.spdx.core.InvalidSPDXAnalysisException;
 
 /**
  * Exceptions related to RDF storage of SPDX documents

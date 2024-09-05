@@ -1,3 +1,4 @@
+package org.spdx.library.model.compat.v2;
 /**
  * Copyright (c) 2019 Source Auditor Inc.
  *
@@ -15,19 +16,27 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package org.spdx.library.model;
 
 
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
-import org.spdx.library.DefaultModelStore;
-import org.spdx.library.InvalidSPDXAnalysisException;
+import org.spdx.core.DefaultModelStore;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
 import org.spdx.library.ModelCopyManager;
-import org.spdx.library.SpdxConstants;
-import org.spdx.library.model.enumerations.AnnotationType;
-import org.spdx.library.model.enumerations.RelationshipType;
+import org.spdx.library.model.v2.Annotation;
+import org.spdx.library.model.v2.GenericModelObject;
+import org.spdx.library.model.v2.GenericSpdxElement;
+import org.spdx.library.model.v2.Relationship;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
+import org.spdx.library.model.v2.SpdxElement;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v2.enumerations.AnnotationType;
+import org.spdx.library.model.v2.enumerations.RelationshipType;
+import org.spdx.library.model.v3_0_1.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
 import org.spdx.storage.IModelStore.IdType;
 
@@ -45,7 +54,7 @@ public class SpdxElementTest extends TestCase {
 	static final String ELEMENT_COMMENT1 = "comment1";
 	static final String ELEMENT_COMMENT2 = "comment2";
 
-	static final String DATE_NOW = new SimpleDateFormat(SpdxConstants.SPDX_DATE_FORMAT).format(new Date());
+	static final String DATE_NOW = new SimpleDateFormat(SpdxConstantsCompatV2.SPDX_DATE_FORMAT).format(new Date());
 	Annotation ANNOTATION1;
 	Annotation ANNOTATION2;
 	SpdxElement RELATED_ELEMENT1;
@@ -57,18 +66,20 @@ public class SpdxElementTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
-		DefaultModelStore.reset(new RdfStore(), "http://test.document.uri/1", new ModelCopyManager());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
+		DefaultModelStore.initialize(new RdfStore("http://defaultdocument"), "http://defaultdocument", new ModelCopyManager());
 		gmo = new GenericModelObject();
 		ANNOTATION1 = gmo.createAnnotation("Person: Annotator1",
 			AnnotationType.OTHER, DATE_NOW, "Comment1");
 		ANNOTATION2 = gmo.createAnnotation("Person: Annotator2",
 				AnnotationType.REVIEW, DATE_NOW, "Comment2");
 		RELATED_ELEMENT1 = new GenericSpdxElement(gmo.getModelStore(), gmo.getDocumentUri(), 
-				gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri()), gmo.getCopyManager(), true);
+				gmo.getModelStore().getNextId(IdType.SpdxId), gmo.getCopyManager(), true);
 		RELATED_ELEMENT1.setName("relatedElementName1");
 		RELATED_ELEMENT1.setComment("related element comment 1");
 		RELATED_ELEMENT2 = new GenericSpdxElement(gmo.getModelStore(), gmo.getDocumentUri(), 
-				gmo.getModelStore().getNextId(IdType.SpdxId, gmo.getDocumentUri()), gmo.getCopyManager(), true);
+				gmo.getModelStore().getNextId(IdType.SpdxId), gmo.getCopyManager(), true);
 		RELATED_ELEMENT2.setName("relatedElementName2");
 		RELATED_ELEMENT2.setComment("related element comment 2");
 	}
@@ -81,15 +92,17 @@ public class SpdxElementTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxElement#verify()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxElement#verify()}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testVerify() throws InvalidSPDXAnalysisException {
-		String id = "SPDXRef-elementId";
+		String id = SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM + "elementId";
 		SpdxElement element1 = new GenericSpdxElement(gmo.getModelStore(), gmo.getDocumentUri(), id, gmo.getCopyManager(), true);
-		assertEquals(0, element1.verify().size());
+		List<String> result = element1.verify();
+		assertEquals(0, result.size());
 		element1.setName(ELEMENT_NAME1);
-		assertEquals(0, element1.verify().size());
+		result = element1.verify();
+		assertEquals(0, result.size());
 	}
 
 	public void testAddRemoveAnnotations() throws InvalidSPDXAnalysisException {
@@ -122,7 +135,7 @@ public class SpdxElementTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxElement#getRelationships()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxElement#getRelationships()}.
 	 */
 	public void testGetRemoveRelationships() throws InvalidSPDXAnalysisException {
 		String id = "elementId";
@@ -157,7 +170,7 @@ public class SpdxElementTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxElement#setComment(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxElement#setComment(java.lang.String)}.
 	 */
 	public void testSetcomment() throws InvalidSPDXAnalysisException {
 		String id = "elementId";
@@ -173,7 +186,7 @@ public class SpdxElementTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxElement#setName(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxElement#setName(java.lang.String)}.
 	 */
 	public void testSetName() throws InvalidSPDXAnalysisException {
 		String id = "elementId";

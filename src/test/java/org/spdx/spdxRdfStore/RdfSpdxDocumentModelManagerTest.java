@@ -13,13 +13,16 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.spdx.library.InvalidSPDXAnalysisException;
-import org.spdx.library.SpdxConstants;
-import org.spdx.library.SpdxInvalidIdException;
-import org.spdx.library.model.DuplicateSpdxIdException;
-import org.spdx.library.model.TypedValue;
+import org.spdx.core.DuplicateSpdxIdException;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
+import org.spdx.core.SpdxInvalidIdException;
+import org.spdx.core.TypedValue;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v3_0_1.SpdxModelInfoV3_0;
 import org.spdx.storage.IModelStore.IdType;
-
+import org.spdx.storage.compatv2.CompatibleModelStoreWrapper;
 
 import junit.framework.TestCase;
 
@@ -34,8 +37,8 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	static final String TEST_ID1 = "id1";
 	static final String TEST_ID2 = "id2";
 
-	static final String TEST_TYPE1 = SpdxConstants.CLASS_ANNOTATION;
-	static final String TEST_TYPE2 = SpdxConstants.CLASS_RELATIONSHIP;
+	static final String TEST_TYPE1 = SpdxConstantsCompatV2.CLASS_ANNOTATION;
+	static final String TEST_TYPE2 = SpdxConstantsCompatV2.CLASS_RELATIONSHIP;
 	static final String[] TEST_VALUE_PROPERTIES = new String[] {"valueProp1", "valueProp2", "valueProp3", "valueProp4"};
 	static final Object[] TEST_VALUE_PROPERTY_VALUES = new Object[] {"value1", true, "value2", null};
 	static final String[] TEST_LIST_PROPERTIES = new String[] {"listProp1", "listProp2", "listProp3"};
@@ -49,10 +52,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
 		TEST_LIST_PROPERTY_VALUES = new ArrayList<?>[] {new ArrayList<>(Arrays.asList("ListItem1", "listItem2", "listItem3")), 
 			new ArrayList<>(Arrays.asList(true, false, true)),
-			new ArrayList<>(Arrays.asList(new TypedValue("typeId1", TEST_TYPE1), new TypedValue("typeId2", TEST_TYPE2)))};
-			TEST_VALUE_PROPERTY_VALUES[3] = new TypedValue("typeId3", TEST_TYPE1);
+			new ArrayList<>(Arrays.asList(new TypedValue(TEST_DOCUMENT_URI1 + "#" + "typeId1", TEST_TYPE1, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION), 
+					new TypedValue(TEST_DOCUMENT_URI1 + "#" + "typeId2", TEST_TYPE2, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION)))};
+			TEST_VALUE_PROPERTY_VALUES[3] = new TypedValue(TEST_DOCUMENT_URI1 + "#" + "typeId3", TEST_TYPE1, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION);
 	}
 
 	/* (non-Javadoc)
@@ -64,18 +70,18 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 
 	public void testUpdateNextIds() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
 		// License ID's
 		String nextId = store.getNextId(IdType.LicenseRef);
 		assertEquals("LicenseRef-gnrtd1", nextId);
-		store.getOrCreate("LicenseRef-gnrtd33", SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + "LicenseRef-gnrtd33", SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
 		nextId = store.getNextId(IdType.LicenseRef);
 		assertEquals("LicenseRef-gnrtd34", nextId);
 		
 		// SPDX ID's
 		nextId = store.getNextId(IdType.SpdxId);
 		assertEquals("SPDXRef-gnrtd1", nextId);
-		store.getOrCreate("SPDXRef-gnrtd33", SpdxConstants.CLASS_SPDX_FILE);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + "SPDXRef-gnrtd33", SpdxConstantsCompatV2.CLASS_SPDX_FILE);
 		nextId = store.getNextId(IdType.SpdxId);
 		assertEquals("SPDXRef-gnrtd34", nextId);
 		
@@ -88,13 +94,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		
 		// Document ID
 		nextId = store.getNextId(IdType.DocumentRef);
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd1", nextId);
-		store.getOrCreate(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd33", SpdxConstants.CLASS_EXTERNAL_DOC_REF);
+		assertEquals(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM + "gnrtd1", nextId);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM + "gnrtd33", SpdxConstantsCompatV2.CLASS_EXTERNAL_DOC_REF);
 		nextId = store.getNextId(IdType.DocumentRef);
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd34", nextId);
+		assertEquals(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM + "gnrtd34", nextId);
 		
 		// test initialization of the next ID's
-		RdfSpdxDocumentModelManager store2 = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
+		RdfSpdxModelManager store2 = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
 		nextId = store2.getNextId(IdType.LicenseRef);
 		assertEquals("LicenseRef-gnrtd34", nextId);
 		nextId = store2.getNextId(IdType.SpdxId);
@@ -103,45 +109,51 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertTrue(nextId.startsWith(RdfStore.ANON_PREFIX));
 		assertFalse(nextId.equals(nextNextId));
 		nextId = store2.getNextId(IdType.DocumentRef);
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd34", nextId);
+		assertEquals(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM + "gnrtd34", nextId);
 	}
 	
 	
 	public void testCreateExists() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
 		String id1 = "TestId1";
 		String id2 = "testId2";
+		String uri1 = TEST_DOCUMENT_URI1 + "#" + id1;
+		String uri2 = TEST_DOCUMENT_URI1 + "#" + id2;
 		assertFalse(store.exists(id1));
 		assertFalse(store.exists(id2));
-		store.getOrCreate(id1, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
+		store.getOrCreate(uri1, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
 		assertTrue(store.exists(id1));
 		assertFalse(store.exists(id2));
-		store.getOrCreate(id2, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
+		store.getOrCreate(uri2, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
 		assertTrue(store.exists(id1));
 		assertTrue(store.exists(id2));
 		
 		// listed licenese
 		String llId = "llid1";
 		String llId2 = "llid2";
+		String lluri1 = SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX + llId;
+		String lluri2 = SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX + llId2;
 		assertFalse(store.exists(llId));
 		assertFalse(store.exists(llId2));
-		store.getOrCreate(llId, SpdxConstants.CLASS_SPDX_LISTED_LICENSE);
+		store.getOrCreate(lluri1, SpdxConstantsCompatV2.CLASS_SPDX_LISTED_LICENSE);
 		assertTrue(store.exists(llId));
 		assertFalse(store.exists(llId2));
-		store.getOrCreate(llId2, SpdxConstants.CLASS_SPDX_LISTED_LICENSE);
+		store.getOrCreate(lluri2, SpdxConstantsCompatV2.CLASS_SPDX_LISTED_LICENSE);
 		assertTrue(store.exists(llId));
 		assertTrue(store.exists(llId2));
 		
 		// listed exception
 		String exId = "exid1";
 		String exId2 = "exid2";
+		String exuri1 = SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX + exId;
+		String exuri2 = SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX + exId2;
 		assertFalse(store.exists(exId));
 		assertFalse(store.exists(exId2));
-		store.getOrCreate(exId, SpdxConstants.CLASS_SPDX_LICENSE_EXCEPTION);
+		store.getOrCreate(exuri1, SpdxConstantsCompatV2.CLASS_SPDX_LICENSE_EXCEPTION);
 		assertTrue(store.exists(exId));
 		assertFalse(store.exists(exId2));
-		store.getOrCreate(exId2, SpdxConstants.CLASS_SPDX_LICENSE_EXCEPTION);
+		store.getOrCreate(exuri2, SpdxConstantsCompatV2.CLASS_SPDX_LICENSE_EXCEPTION);
 		assertTrue(store.exists(exId));
 		assertTrue(store.exists(exId2));
 		
@@ -150,15 +162,15 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		String anon2 = store.getNextId(IdType.Anonymous);
 		assertFalse(store.exists(anon1));
 		assertFalse(store.exists(anon2));
-		store.getOrCreate(anon1, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
+		store.getOrCreate(anon1, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
 		assertTrue(store.exists(anon1));
 		assertFalse(store.exists(anon2));
-		store.getOrCreate(anon2, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
+		store.getOrCreate(anon2, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
 		assertTrue(store.exists(anon1));
 		assertTrue(store.exists(anon2));
 		
 		// separate store with the same model
-		RdfSpdxDocumentModelManager store2 = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
+		RdfSpdxModelManager store2 = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
 		assertTrue(store2.exists(id1));
 		assertTrue(store2.exists(id2));
 		assertTrue(store2.exists(llId));
@@ -170,14 +182,14 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#getPropertyValueNames(java.lang.String)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#getPropertyValueNames(java.lang.String)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testGetPropertyValueNames() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
-		store.getOrCreate(TEST_ID2, SpdxConstants.CLASS_ANNOTATION);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		assertEquals(0, store.getPropertyValueNames(TEST_ID1).size());
 		assertEquals(0, store.getPropertyValueNames(TEST_ID2).size());
 		for (int i = 0; i < TEST_VALUE_PROPERTIES.length; i++) {
@@ -200,13 +212,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#setValue(java.lang.String, java.lang.String, java.lang.Object)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#setValue(java.lang.String, java.lang.String, java.lang.Object)}.
 	 */
 	public void testGetSetValue() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
-		store.getOrCreate(TEST_ID2, SpdxConstants.CLASS_ANNOTATION);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		assertFalse(store.getPropertyValue(TEST_ID1, TEST_VALUE_PROPERTIES[0]).isPresent());
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_VALUE_PROPERTIES[0]).isPresent());
 		store.setValue(TEST_ID1, TEST_VALUE_PROPERTIES[0], TEST_VALUE_PROPERTY_VALUES[0]);
@@ -220,20 +232,20 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	
 	public void testRenamedProperty() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_SPDX_DOCUMENT);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT);
 		String value = "2.1.2";
-		store.setValue(TEST_ID1, SpdxConstants.PROP_SPDX_SPEC_VERSION, value);
-		assertEquals(value, store.getPropertyValue(TEST_ID1, SpdxConstants.PROP_SPDX_SPEC_VERSION).get());
-		assertEquals(value, store.getPropertyValue(TEST_ID1, SpdxConstants.PROP_SPDX_VERSION).get());
+		store.setValue(TEST_ID1, SpdxConstantsCompatV2.PROP_SPDX_SPEC_VERSION.getName(), value);
+		assertEquals(value, store.getPropertyValue(TEST_ID1, SpdxConstantsCompatV2.PROP_SPDX_SPEC_VERSION.getName()).get());
+		assertEquals(value, store.getPropertyValue(TEST_ID1, SpdxConstantsCompatV2.PROP_SPDX_VERSION.getName()).get());
 		List<String> allValues = store.getPropertyValueNames(TEST_ID1);
 		assertEquals(1, allValues.size());
-		assertEquals(SpdxConstants.PROP_SPDX_SPEC_VERSION, allValues.get(0));
+		assertEquals(SpdxConstantsCompatV2.PROP_SPDX_SPEC_VERSION.getName(), allValues.get(0));
 	}
 	
 	public void testGetNextId() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
 		// License ID's
 		String nextId = store.getNextId(IdType.LicenseRef);
 		assertEquals("LicenseRef-gnrtd1", nextId);
@@ -248,19 +260,19 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		
 		// Document ID
 		nextId = store.getNextId(IdType.DocumentRef);
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd1", nextId);
+		assertEquals(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM + "gnrtd1", nextId);
 		nextId = store.getNextId(IdType.DocumentRef);
-		assertEquals(SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "gnrtd2", nextId);
+		assertEquals(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM + "gnrtd2", nextId);
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#removeProperty(java.lang.String, java.lang.String)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#removeProperty(java.lang.String, java.lang.String)}.
 	 */
 	public void testRemoveProperty() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
-		store.getOrCreate(TEST_ID2, SpdxConstants.CLASS_ANNOTATION);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		assertFalse(store.getPropertyValue(TEST_ID1, TEST_LIST_PROPERTIES[0]).isPresent());
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_LIST_PROPERTIES[0]).isPresent());
 		for (Object e:TEST_LIST_PROPERTY_VALUES[0]) {
@@ -301,13 +313,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#getAllItems(java.lang.String)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#getAllItems(java.lang.String)}.
 	 */
 	public void testGetAllItems() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
-		store.getOrCreate(TEST_ID2, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
 		assertEquals(0, store.getPropertyValueNames(TEST_ID1).size());
 		assertEquals(0, store.getPropertyValueNames(TEST_ID2).size());
 		for (int i = 0; i < TEST_VALUE_PROPERTIES.length; i++) {
@@ -319,8 +331,8 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 			}
 		}
 		final ArrayList<TypedValue> expected = new ArrayList<>(Arrays.asList(new TypedValue[]{
-				new TypedValue(TEST_ID1, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO),
-				new TypedValue(TEST_ID2, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO),
+				new TypedValue(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION),
+				new TypedValue(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION),
 				(TypedValue)TEST_VALUE_PROPERTY_VALUES[3],
 				(TypedValue)TEST_LIST_PROPERTY_VALUES[2].get(0),
 				(TypedValue)TEST_LIST_PROPERTY_VALUES[2].get(1)
@@ -333,10 +345,10 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		
 		// filtered
 		final ArrayList<TypedValue> newexpected = new ArrayList<>(Arrays.asList(new TypedValue[]{
-				new TypedValue(TEST_ID1, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO),
-				new TypedValue(TEST_ID2, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO)
+				new TypedValue(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION),
+				new TypedValue(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION)
 		}));
-		for (Object item: store.getAllItems(SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO).collect(Collectors.toList())) {
+		for (Object item: store.getAllItems(SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO).collect(Collectors.toList())) {
 			assertTrue(newexpected.contains(item));
 			newexpected.remove(item);
 		}
@@ -344,7 +356,7 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#beginTransaction(org.spdx.storage.IModelStore.ReadWrite)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#beginTransaction(org.spdx.storage.IModelStore.ReadWrite)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 * @throws IOException 
 	 * Currently not supported
@@ -352,11 +364,11 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	 *
 	public void testBeginTransaction() throws InvalidSPDXAnalysisException, IOException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
 		IModelStore.ModelTransaction transaction = store.beginTransaction(IModelStore.ReadWrite.WRITE);
 		try {
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
-		store.getOrCreate(TEST_ID2, SpdxConstants.CLASS_ANNOTATION);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		assertFalse(store.getPropertyValue(TEST_ID1, TEST_VALUE_PROPERTIES[0]).isPresent());
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_VALUE_PROPERTIES[0]).isPresent());
 		store.setValue(TEST_ID1, TEST_VALUE_PROPERTIES[0], TEST_VALUE_PROPERTY_VALUES[0]);
@@ -375,12 +387,12 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	} */
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#removeValueFromCollection(java.lang.String, java.lang.String, java.lang.Object)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#removeValueFromCollection(java.lang.String, java.lang.String, java.lang.Object)}.
 	 */
 	public void testRemoveValueFromCollection() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		String value1 = "value1";
 		String value2 = "value2";
 		store.addValueToCollection( TEST_ID1, TEST_LIST_PROPERTIES[0], value1);
@@ -404,13 +416,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#collectionSize(java.lang.String, java.lang.String)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#collectionSize(java.lang.String, java.lang.String)}.
 	 */
 	public void testCollectionSize() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
-		store.getOrCreate(TEST_ID2, SpdxConstants.CLASS_ANNOTATION);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		assertFalse(store.getPropertyValue(TEST_ID1, TEST_LIST_PROPERTIES[0]).isPresent());
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_LIST_PROPERTIES[0]).isPresent());
 		String value1 = "value1";
@@ -422,13 +434,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#collectionContains(java.lang.String, java.lang.String, java.lang.Object)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#collectionContains(java.lang.String, java.lang.String, java.lang.Object)}.
 	 */
 	public void testCollectionContains() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
-		store.getOrCreate(TEST_ID2, SpdxConstants.CLASS_ANNOTATION);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		assertFalse(store.getPropertyValue(TEST_ID1, TEST_LIST_PROPERTIES[0]).isPresent());
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_LIST_PROPERTIES[0]).isPresent());
 		String value1 = "value1";
@@ -441,13 +453,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#clearValueCollection(java.lang.String, java.lang.String)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#clearValueCollection(java.lang.String, java.lang.String)}.
 	 */
 	public void testClearValueCollection() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
-		store.getOrCreate(TEST_ID2, SpdxConstants.CLASS_ANNOTATION);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		assertFalse(store.getPropertyValue(TEST_ID1, TEST_LIST_PROPERTIES[0]).isPresent());
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_LIST_PROPERTIES[0]).isPresent());
 		String value1 = "value1";
@@ -463,13 +475,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#addValueToCollection(java.lang.String, java.lang.String, java.lang.Object)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#addValueToCollection(java.lang.String, java.lang.String, java.lang.Object)}.
 	 */
 	public void testAddValueToCollection() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
-		store.getOrCreate(TEST_ID2, SpdxConstants.CLASS_ANNOTATION);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID2, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		assertFalse(store.getPropertyValue(TEST_ID1, TEST_LIST_PROPERTIES[0]).isPresent());
 		assertFalse(store.getPropertyValue(TEST_ID2, TEST_LIST_PROPERTIES[0]).isPresent());
 		String value1 = "value1";
@@ -483,13 +495,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#isCollectionMembersAssignableTo(java.lang.String, java.lang.String, java.lang.Class)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#isCollectionMembersAssignableTo(java.lang.String, java.lang.String, java.lang.Class)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testIsCollectionMembersAssignableTo() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		// String
 		String sProperty = "stringprop";
 		store.addValueToCollection(TEST_ID1, sProperty, "String 1");
@@ -506,13 +518,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertFalse(store.isCollectionMembersAssignableTo(TEST_ID1, bProperty, TypedValue.class));
 		// TypedValue
 		String tvProperty  = "tvprop";
-		store.addValueToCollection(TEST_ID1, tvProperty, new TypedValue(TEST_ID2, TEST_TYPE2));
+		store.addValueToCollection(TEST_ID1, tvProperty, new TypedValue(TEST_ID2, TEST_TYPE2, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION));
 		assertFalse(store.isCollectionMembersAssignableTo(TEST_ID1, tvProperty, String.class));
 		assertFalse(store.isCollectionMembersAssignableTo(TEST_ID1, tvProperty, Boolean.class));
 		assertTrue(store.isCollectionMembersAssignableTo(TEST_ID1, tvProperty, TypedValue.class));
 		// Mixed
 		String mixedProperty = "mixedprop";
-		store.addValueToCollection(TEST_ID1, mixedProperty, new TypedValue(TEST_ID2, TEST_TYPE2));
+		store.addValueToCollection(TEST_ID1, mixedProperty, new TypedValue(TEST_ID2, TEST_TYPE2, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION));
 		store.addValueToCollection(TEST_ID1, mixedProperty, Boolean.valueOf(true));
 		store.addValueToCollection(TEST_ID1, mixedProperty, "mixed value");
 		assertFalse(store.isCollectionMembersAssignableTo(TEST_ID1, mixedProperty, String.class));
@@ -526,12 +538,12 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#isPropertyValueAssignableTo(java.lang.String, java.lang.String, java.lang.Class)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#isPropertyValueAssignableTo(java.lang.String, java.lang.String, java.lang.Class)}.
 	 */
 	public void testIsPropertyValueAssignableTo() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_ANNOTATION);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_ANNOTATION);
 		// String
 		String sProperty = "stringprop";
 		store.setValue(TEST_ID1, sProperty, "String 1");
@@ -546,7 +558,7 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 		assertFalse(store.isPropertyValueAssignableTo(TEST_ID1, bProperty, TypedValue.class));
 		// TypedValue
 		String tvProperty = "tvprop";
-		store.setValue(TEST_ID1, tvProperty, new TypedValue(TEST_ID2, TEST_TYPE2));
+		store.setValue(TEST_ID1, tvProperty, new TypedValue(TEST_ID2, TEST_TYPE2, CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION));
 		assertFalse(store.isPropertyValueAssignableTo(TEST_ID1, tvProperty, String.class));
 		assertFalse(store.isPropertyValueAssignableTo(TEST_ID1, tvProperty, Boolean.class));
 		assertTrue(store.isPropertyValueAssignableTo(TEST_ID1, tvProperty, TypedValue.class));
@@ -556,16 +568,16 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxDocumentModelManager#isCollectionProperty(java.lang.String, java.lang.String)}.
+	 * Test method for {@link org.spdx.spdxRdfStore.RdfSpdxModelManager#isCollectionProperty(java.lang.String, java.lang.String)}.
 	 */
 	public void testIsCollectionProperty() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_SPDX_CREATION_INFO);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_SPDX_CREATION_INFO);
 		// String
-		String sProperty = SpdxConstants.PROP_CREATION_CREATED;
+		String sProperty = SpdxConstantsCompatV2.PROP_CREATION_CREATED.getName();
 		store.setValue(TEST_ID1, sProperty, "String 1");
-		String listProperty = SpdxConstants.PROP_CREATION_CREATOR;
+		String listProperty = SpdxConstantsCompatV2.PROP_CREATION_CREATOR.getName();
 		store.addValueToCollection(TEST_ID1, listProperty, "testValue");
 		store.addValueToCollection(TEST_ID1, listProperty, "testValue2");
 		assertTrue(store.isCollectionProperty(TEST_ID1, listProperty));
@@ -574,13 +586,13 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 	
 	public void testGetCasesensitiveId() throws SpdxInvalidIdException, DuplicateSpdxIdException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		String licenseId = SpdxConstants.NON_STD_LICENSE_ID_PRENUM+"NowisTheTime";
-		String spdxId = SpdxConstants.SPDX_ELEMENT_REF_PRENUM + "AnAnother";
-		String documentId = SpdxConstants.EXTERNAL_DOC_REF_PRENUM + "DocumentNextOne";
-		store.getOrCreate(licenseId, SpdxConstants.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
-		store.getOrCreate(spdxId, SpdxConstants.CLASS_SPDX_FILE);
-		store.getOrCreate(documentId, SpdxConstants.CLASS_EXTERNAL_DOC_REF);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		String licenseId = SpdxConstantsCompatV2.NON_STD_LICENSE_ID_PRENUM+"NowisTheTime";
+		String spdxId = SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM + "AnAnother";
+		String documentId = SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM + "DocumentNextOne";
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + licenseId, SpdxConstantsCompatV2.CLASS_SPDX_EXTRACTED_LICENSING_INFO);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + spdxId, SpdxConstantsCompatV2.CLASS_SPDX_FILE);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + documentId, SpdxConstantsCompatV2.CLASS_EXTERNAL_DOC_REF);
 		assertEquals(licenseId, store.getCasesensitiveId(licenseId.toUpperCase()).get());
 		assertEquals(spdxId, store.getCasesensitiveId(spdxId.toUpperCase()).get());
 		assertEquals(documentId, store.getCasesensitiveId(documentId.toUpperCase()).get());
@@ -592,11 +604,12 @@ public class RdfSpdxDocumentModelManagerTest extends TestCase {
 
 	public void testGetTypedValue() throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
-		RdfSpdxDocumentModelManager store = new RdfSpdxDocumentModelManager(TEST_DOCUMENT_URI1, model);
-		store.getOrCreate(TEST_ID1, SpdxConstants.CLASS_SPDX_CREATION_INFO);
+		RdfSpdxModelManager store = new RdfSpdxModelManager(TEST_DOCUMENT_URI1, model);
+		store.getOrCreate(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, SpdxConstantsCompatV2.CLASS_SPDX_CREATION_INFO);
 		Optional<TypedValue> result = store.getTypedValue(TEST_ID1);
 		assertTrue(result.isPresent());
-		assertEquals(TEST_ID1, result.get().getId());
-		assertEquals(SpdxConstants.CLASS_SPDX_CREATION_INFO, result.get().getType());
+		assertEquals(TEST_DOCUMENT_URI1 + "#" + TEST_ID1, result.get().getObjectUri());
+		assertEquals(CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION, result.get().getSpecVersion());
+		assertEquals(SpdxConstantsCompatV2.CLASS_SPDX_CREATION_INFO, result.get().getType());
 	}
 }

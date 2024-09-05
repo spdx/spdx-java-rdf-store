@@ -22,18 +22,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+import javax.annotation.Nullable;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
@@ -44,14 +42,17 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spdx.library.InvalidSPDXAnalysisException;
-import org.spdx.library.SpdxConstants;
-import org.spdx.library.model.DuplicateSpdxIdException;
-import org.spdx.library.model.SpdxIdNotFoundException;
-import org.spdx.library.model.TypedValue;
-import org.spdx.library.model.license.LicenseInfoFactory;
+import org.spdx.core.CoreModelObject;
+import org.spdx.core.DuplicateSpdxIdException;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.TypedValue;
+import org.spdx.library.SpdxModelFactory;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
+import org.spdx.library.model.v2.SpdxDocument;
 import org.spdx.storage.IModelStore;
 import org.spdx.storage.ISerializableModelStore;
+import org.spdx.storage.PropertyDescriptor;
+import org.spdx.storage.compatv2.CompatibleModelStoreWrapper;
 
 /**
  * Model Store implemented using RDF
@@ -64,14 +65,14 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	static final Logger logger = LoggerFactory.getLogger(RdfStore.class.getName());
 	
 	static final String GENERATED = "gnrtd";
-	static Pattern DOCUMENT_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstants.EXTERNAL_DOC_REF_PRENUM+GENERATED+"(\\d+)$");
-	static Pattern SPDX_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstants.SPDX_ELEMENT_REF_PRENUM+GENERATED+"(\\d+)$");
-	static Pattern LICENSE_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstants.NON_STD_LICENSE_ID_PRENUM+GENERATED+"(\\d+)$");
+	static Pattern DOCUMENT_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM+GENERATED+"(\\d+)$");
+	static Pattern SPDX_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM+GENERATED+"(\\d+)$");
+	static Pattern LICENSE_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstantsCompatV2.NON_STD_LICENSE_ID_PRENUM+GENERATED+"(\\d+)$");
 	static final String ANON_PREFIX = "__anon__";
 	static Pattern ANON_ID_PATTERN = Pattern.compile(ANON_PREFIX+"(.+)$");
-	private static final Set<String> LITERAL_VALUE_SET = new HashSet<String>(Arrays.asList(SpdxConstants.LITERAL_VALUES));
-
-	Map<String, RdfSpdxDocumentModelManager> documentUriModelMap = new ConcurrentHashMap<>();
+	RdfSpdxModelManager modelManager;
+	String documentUri;
+	boolean dontStoreLicenseDetails = false;
 	
 	private OutputFormat outputFormat = OutputFormat.XML_ABBREV;
 
@@ -79,12 +80,76 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		ARQ.init();		// Insure ARQ is initialized
 	}
 	
+	/**
+	 * Create an RDF store and initialize it with an SPDX document deserialized from stream
+	 * Note that the stream must contain one and only one SPDX document in SPDX version 2.X format
+	 * @param stream
+	 * @throws IOException 
+	 * @throws InvalidSPDXAnalysisException 
+	 */
+	public RdfStore(InputStream stream) throws InvalidSPDXAnalysisException, IOException {
+		deSerialize(stream, false);
+	}
+	
+	/**
+	 * Creates an uninitialized RDF store - the documentUri must be set or a stream deserialized before any other methods are called
+	 */
+	public RdfStore() {
+		this.modelManager = null;
+		this.documentUri = null;
+	}
+	
+	/**
+	 * Create an RDF store and initialize it with an data deserialized from stream using the documentUri
+	 * for ID prefixes
+	 * @param stream
+	 * @throws IOException 
+	 * @throws InvalidSPDXAnalysisException 
+	 */
+	public RdfStore(InputStream stream, String documentUri) throws InvalidSPDXAnalysisException, IOException {
+		this.documentUri = documentUri;
+		deSerialize(stream, false, documentUri);
+	}
+	
+	/**
+	 * @param documentUri URI for the SPDX document used in this store
+	 */
+	public RdfStore(String documentUri) {
+		this.documentUri = documentUri;
+		modelManager = createModelManager(documentUri);
+	}
 
 	/**
 	 * @return the outputFormat
 	 */
 	public OutputFormat getOutputFormat() {
 		return outputFormat;
+	}
+	
+	/**
+	 * @return the document URI
+	 */
+	public @Nullable String getDocumentUri() {
+		return this.documentUri;
+	}
+	
+	/**
+	 * @param documentUri document URI to set
+	 * @param overwrite setting a different document URI will overwrite an existing model - this flag will allow it to be overwritten
+	 * @throws InvalidSPDXAnalysisException if the document URI already exists and override is set to false
+	 */
+	public void setDocumentUri(@Nullable String documentUri, boolean overwrite) throws InvalidSPDXAnalysisException {
+		if (Objects.nonNull(this.documentUri) && !overwrite && !Objects.equals(this.documentUri, documentUri)) {
+			throw new InvalidSPDXAnalysisException("Document URI "+this.documentUri+" already exists");
+		}
+		if (!Objects.equals(this.documentUri, documentUri)) {
+			this.documentUri = documentUri;
+			if (Objects.nonNull(documentUri)) {
+				modelManager = createModelManager(documentUri);
+			} else {
+				modelManager = null;
+			}
+		}
 	}
 
 	/**
@@ -93,83 +158,114 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	public void setOutputFormat(OutputFormat outputFormat) {
 		this.outputFormat = outputFormat;
 	}
+	
+	
+
+	/**
+	 * @return the dontStoreLicenseDetails - if true, listed license properties will not be stored in the RDF store
+	 */
+	public boolean isDontStoreLicenseDetails() {
+		return dontStoreLicenseDetails;
+	}
+
+	/**
+	 * @param dontStoreLicenseDetails the dontStoreLicenseDetails to set - if true, listed license properties will not be stored in the RDF store
+	 */
+	public void setDontStoreLicenseDetails(boolean dontStoreLicenseDetails) {
+		this.dontStoreLicenseDetails = dontStoreLicenseDetails;
+	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#exists(java.lang.String, java.lang.String)
 	 */
 	@Override
-	public boolean exists(String documentUri, String id) {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		RdfSpdxDocumentModelManager documentModel = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(documentModel)) {
+	public boolean exists(String objectUri) {
+		if (Objects.isNull(modelManager)) {
 			return false;
 		}
-		return documentModel.exists(id);
+		Objects.requireNonNull(objectUri, "Missing required objectUri");
+		if (!isAnon(objectUri) && !objectUri.startsWith(documentUri + "#") && 
+				!objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX) &&
+				!objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_URL)) {
+			return false;
+		}
+		String id;
+		try {
+			id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		} catch (InvalidSPDXAnalysisException e) {
+			logger.warn("Unable to convert Object URI into a document URI + ID: "+objectUri);
+			return false;
+		}
+		return modelManager.exists(id);
 	}
 
+	@Override
+	public boolean isAnon(String objectUri) {
+		Objects.requireNonNull(objectUri, "Missing required objectUri");
+		return ANON_ID_PATTERN.matcher(objectUri).matches();
+	}
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#getIdType(java.lang.String)
 	 */
 	@Override
-	public IdType getIdType(String id) {
-		Objects.requireNonNull(id, "Missing required ID");
-		if (ANON_ID_PATTERN.matcher(id).matches()) {
+	public IdType getIdType(String objectUri) {
+		Objects.requireNonNull(objectUri, "Missing required objectUri");
+		if (isAnon(objectUri)) {
 			return IdType.Anonymous;
 		}
-		if (SpdxConstants.LICENSE_ID_PATTERN.matcher(id).matches()) {
-			return IdType.LicenseRef;
-		}
-		if (SpdxConstants.EXTERNAL_DOC_REF_PATTERN.matcher(id).matches()) {
-			return IdType.DocumentRef;
-		}
-		if (SpdxConstants.SPDX_ELEMENT_REF_PATTERN.matcher(id).matches()) {
-			return IdType.SpdxId;
-		}
-		if (LITERAL_VALUE_SET.contains(id)) {
-			return IdType.Literal;
-		}
-		if (LicenseInfoFactory.isSpdxListedLicenseId(id) || LicenseInfoFactory.isSpdxListedExceptionId(id)) {
+		if (objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX) || 
+				objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_URL)) {
 			return IdType.ListedLicense;
-		} else {
+		}
+		String id;
+		try {
+			id = CompatibleModelStoreWrapper.objectUriToId(false, objectUri, documentUri);
+		} catch (InvalidSPDXAnalysisException e) {
+			logger.warn("Error converting object URI to ID for URI: "+objectUri, e);
 			return IdType.Unkown;
 		}
+		if (SpdxConstantsCompatV2.LICENSE_ID_PATTERN.matcher(id).matches()) {
+			return IdType.LicenseRef;
+		}
+		if (SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PATTERN.matcher(id).matches()) {
+			return IdType.DocumentRef;
+		}
+		if (SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PATTERN.matcher(id).matches()) {
+			return IdType.SpdxId;
+		}
+		return IdType.Unkown;
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#create(java.lang.String, java.lang.String, java.lang.String)
 	 */
 	@Override
-	public void create(String documentUri, String id, String type) throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(type, "Missing required type");
-		RdfSpdxDocumentModelManager modelManager = getOrCreateModelManager(documentUri);
+	public void create(TypedValue typedValue) throws InvalidSPDXAnalysisException {
+		checkClosed();
+		Objects.requireNonNull(typedValue, "Missing required typed value");
+		if (SpdxConstantsCompatV2.CLASS_EXTERNAL_SPDX_ELEMENT.equals(typedValue.getType()) ||
+				SpdxConstantsCompatV2.CLASS_EXTERNAL_EXTRACTED_LICENSE.equals(typedValue.getType())) {
+			return; // we don't create the external elements
+		}
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, typedValue.getObjectUri(), documentUri);
 		if (modelManager.getCasesensitiveId(id).isPresent()) {
 			throw new DuplicateSpdxIdException("Id "+id+" already exists.");
 		}
-		modelManager.getOrCreate(id, type);
+		modelManager.getOrCreate(typedValue.getObjectUri(), typedValue.getType());
 	}
 	
 	/**
-	 * Gets an existing model manager or create a model manager if it does not exist
+	 * Initialize an empty model manager
 	 * @param documentUri Document URI for the model manager
 	 * @return modelManager associated with the documentUri
 	 */
-	private RdfSpdxDocumentModelManager getOrCreateModelManager(String documentUri) {
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			Model model = ModelFactory.createDefaultModel();
-			model.getGraph().getPrefixMapping().setNsPrefix("spdx", SpdxConstants.SPDX_NAMESPACE);
-			model.getGraph().getPrefixMapping().setNsPrefix("doap", SpdxConstants.DOAP_NAMESPACE);
-			model.getGraph().getPrefixMapping().setNsPrefix("ptr", SpdxConstants.RDF_POINTER_NAMESPACE);
-			model.getGraph().getPrefixMapping().setNsPrefix("rdfs", SpdxConstants.RDFS_NAMESPACE);
-			modelManager = new RdfSpdxDocumentModelManager(documentUri, model);
-			RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentUri, modelManager);
-			if (!Objects.isNull(previousModel))  {
-				modelManager = previousModel;
-			}
-		}
+	private RdfSpdxModelManager createModelManager(String documentUri) {
+		Model model = ModelFactory.createDefaultModel();
+		model.getGraph().getPrefixMapping().setNsPrefix("spdx", SpdxConstantsCompatV2.SPDX_NAMESPACE);
+		model.getGraph().getPrefixMapping().setNsPrefix("doap", SpdxConstantsCompatV2.DOAP_NAMESPACE);
+		model.getGraph().getPrefixMapping().setNsPrefix("ptr", SpdxConstantsCompatV2.RDF_POINTER_NAMESPACE);
+		model.getGraph().getPrefixMapping().setNsPrefix("rdfs", SpdxConstantsCompatV2.RDFS_NAMESPACE);
+		RdfSpdxModelManager modelManager = new RdfSpdxModelManager(documentUri, model);
 		return modelManager;
 	}
 
@@ -177,14 +273,13 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 * @see org.spdx.storage.IModelStore#getPropertyValueNames(java.lang.String, java.lang.String)
 	 */
 	@Override
-	public List<String> getPropertyValueNames(String documentUri, String id) throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			return  new ArrayList<>();
-		}
-		return modelManager.getPropertyValueNames(id);
+	public List<PropertyDescriptor> getPropertyValueDescriptors(String objectUri) throws InvalidSPDXAnalysisException {
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required object URI");
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		return StreamSupport.stream(modelManager.getPropertyValueNames(id).spliterator(), false)
+				.map(propName -> CompatibleModelStoreWrapper.propNameToPropDescriptor(propName))
+				.collect(Collectors.toList());
 	}
 
 
@@ -193,54 +288,47 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 * @see org.spdx.storage.IModelStore#setValue(java.lang.String, java.lang.String, java.lang.String, java.lang.Object)
 	 */
 	@Override
-	public void setValue(String documentUri, String id, String propertyName, Object value)
+	public void setValue(String objectUri, PropertyDescriptor prop, Object value)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(id);
-		Objects.requireNonNull(documentUri);
-		Objects.requireNonNull(propertyName);
-		Objects.requireNonNull(value);
-		RdfSpdxDocumentModelManager modelManager = this.documentUriModelMap.get(documentUri);
-		if (modelManager == null) {
-			logger.error("Attempting to set a value for a non-existent document URI "+documentUri+" ID: "+id);
-			throw new SpdxIdNotFoundException("Document URI "+documentUri+" was not found in the RDF store.  The ID must first be created before getting or setting property values.");
+		checkClosed();
+		Objects.requireNonNull(objectUri);
+		Objects.requireNonNull(prop);
+		if (isListedLicenseOrException(objectUri) && dontStoreLicenseDetails) {
+			return;
 		}
-		modelManager.setValue(id, propertyName, value);
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		modelManager.setValue(id, prop.getName(), value);
+	}
+
+	/**
+	 * @param objectUri URI or temp ID of an SPDX object
+	 * @return true if the object URI is associated with a listed license or a listed exception
+	 */
+	private boolean isListedLicenseOrException(String objectUri) {
+		return Objects.isNull(objectUri) || objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX) ||
+				objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_URL);
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#getValue(java.lang.String, java.lang.String, java.lang.String)
 	 */
 	@Override
-	public Optional<Object> getValue(String documentUri, String id, String propertyName)
+	public Optional<Object> getValue(String objectUri, PropertyDescriptor prop)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			return Optional.empty();
-		}
-		return modelManager.getPropertyValue(id, propertyName);
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required object URI");
+		Objects.requireNonNull(prop, "Missing required property descriptor");
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		return modelManager.getPropertyValue(id, prop.getName());
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#getNextId(org.spdx.storage.IModelStore.IdType, java.lang.String)
 	 */
 	@Override
-	public String getNextId(IdType idType, String documentUri) throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
+	public String getNextId(IdType idType) throws InvalidSPDXAnalysisException {
+		checkClosed();
 		Objects.requireNonNull(idType, "Missing required ID type");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			Model model = ModelFactory.createDefaultModel();
-			model.getGraph().getPrefixMapping().setNsPrefix("spdx", SpdxConstants.SPDX_NAMESPACE);
-			model.getGraph().getPrefixMapping().setNsPrefix("doap", SpdxConstants.DOAP_NAMESPACE);
-			modelManager = new RdfSpdxDocumentModelManager(documentUri, model);
-			RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentUri, modelManager);
-			if (!Objects.isNull(previousModel))  {
-				modelManager = previousModel;
-			}
-		}
 		return modelManager.getNextId(idType);
 	}
 
@@ -248,185 +336,146 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 * @see org.spdx.storage.IModelStore#removeProperty(java.lang.String, java.lang.String, java.lang.String)
 	 */
 	@Override
-	public void removeProperty(String documentUri, String id, String propertyName) throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not remove a property.");
-			throw new SpdxRdfException("The document has not been created.  Can not remove property");
-		}
-		modelManager.removeProperty(id, propertyName);
-	}
-
-	/* (non-Javadoc)
-	 * @see org.spdx.storage.IModelStore#getDocumentUris()
-	 */
-	@Override
-	public List<String> getDocumentUris() {
-		return Collections.unmodifiableList(new ArrayList<String>(this.documentUriModelMap.keySet()));
+	public void removeProperty(String objectUri, PropertyDescriptor prop) throws InvalidSPDXAnalysisException {
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		Objects.requireNonNull(prop, "Missing required property descriptor");
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		modelManager.removeProperty(id, prop.getName());
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#getAllItems(java.lang.String, java.util.Optional)
 	 */
 	@Override
-	public Stream<TypedValue> getAllItems(String documentUri, String typeFilter)
+	public Stream<TypedValue> getAllItems(@Nullable String prefix, String typeFilter)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			return new ArrayList<TypedValue>().stream();
-		}
+		checkClosed();
 		return modelManager.getAllItems(typeFilter);
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#removeValueFromCollection(java.lang.String, java.lang.String, java.lang.String, java.lang.Object)
 	 */
-	public boolean removeValueFromCollection(String documentUri, String id, String propertyName, Object value)
+	public boolean removeValueFromCollection(String objectUri, PropertyDescriptor propertyDescriptor, Object value)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required object URI");
+		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
 		Objects.requireNonNull(value, "Mising required value");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not remove a value from a collection.");
-			throw new SpdxRdfException("The document has not been created.  Can not remove value from a collection");
+		if (isListedLicenseOrException(objectUri) && dontStoreLicenseDetails) {
+			return false;
 		}
-		return modelManager.removeValueFromCollection(id, propertyName, value);
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		return modelManager.removeValueFromCollection(id, propertyDescriptor.getName(), value);
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#collectionSize(java.lang.String, java.lang.String, java.lang.String)
 	 */
-	public int collectionSize(String documentUri, String id, String propertyName) throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not retrieve a collection.");
-			throw new SpdxRdfException("The document has not been created.  Can not retrieve a collection.");
-		}
-		return modelManager.collectionSize(id, propertyName);
+	public int collectionSize(String objectUri, PropertyDescriptor propertyDescriptor) throws InvalidSPDXAnalysisException {
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		return modelManager.collectionSize(id, propertyDescriptor.getName());
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#collectionContains(java.lang.String, java.lang.String, java.lang.String, java.lang.Object)
 	 */
-	public boolean collectionContains(String documentUri, String id, String propertyName, Object value)
+	public boolean collectionContains(String objectUri, PropertyDescriptor propertyDescriptor, Object value)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
 		Objects.requireNonNull(value, "Missing required value");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not retrieve a collection.");
-			throw new SpdxRdfException("The document has not been created.  Can not retrieve a collection.");
-		}
-		return modelManager.collectionContains(id, propertyName, value);
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		return modelManager.collectionContains(id, propertyDescriptor.getName(), value);
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#clearValueCollection(java.lang.String, java.lang.String, java.lang.String)
 	 */
-	public void clearValueCollection(String documentUri, String id, String propertyName)
+	public void clearValueCollection(String objectUri, PropertyDescriptor propertyDescriptor)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not retrieve a collection.");
-			throw new SpdxRdfException("The document has not been created.  Can not retrieve a collection.");
-		}
-		modelManager.clearValueCollection(id, propertyName);
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		modelManager.clearValueCollection(id, propertyDescriptor.getName());
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#addValueToCollection(java.lang.String, java.lang.String, java.lang.String, java.lang.Object)
 	 */
-	public boolean addValueToCollection(String documentUri, String id, String propertyName, Object value)
+	public boolean addValueToCollection(String objectUri, PropertyDescriptor propertyDescriptor, Object value)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not add a collection.");
-			throw new SpdxRdfException("The document has not been created.  Can not add a collection.");
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
+		checkClosed();
+		if (isListedLicenseOrException(objectUri) && dontStoreLicenseDetails) {
+			return false;
 		}
-		return modelManager.addValueToCollection(id, propertyName, value);
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		return modelManager.addValueToCollection(id, propertyDescriptor.getName(), value);
+	}
+	
+	private void checkClosed() throws InvalidSPDXAnalysisException {
+		if (Objects.isNull(modelManager)) {
+			throw new InvalidSPDXAnalysisException("RDF Store has been closed or not properly initialized");
+		}
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#getValueList(java.lang.String, java.lang.String, java.lang.String)
 	 */
-	public Iterator<Object> listValues(String documentUri, String id, String propertyName)
+	public Iterator<Object> listValues(String objectUri, PropertyDescriptor propertyDescriptor)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not get a collection.");
-			throw new SpdxRdfException("The document has not been created.  Can not get a collection.");
-		}
-		return modelManager.getValueList(id, propertyName);
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		return modelManager.getValueList(id, propertyDescriptor.getName());
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#isCollectionMembersAssignableTo(java.lang.String, java.lang.String, java.lang.String, java.lang.Class)
 	 */
-	public boolean isCollectionMembersAssignableTo(String documentUri, String id, String propertyName, Class<?> clazz)
+	public boolean isCollectionMembersAssignableTo(String objectUri, PropertyDescriptor propertyDescriptor, Class<?> clazz)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
 		Objects.requireNonNull(clazz, "Missing required class");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not get a collection.");
-			throw new SpdxRdfException("The document has not been created.  Can not get a collection.");
-		}
-		return modelManager.isCollectionMembersAssignableTo(id, propertyName, clazz);
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		return modelManager.isCollectionMembersAssignableTo(id, propertyDescriptor.getName(), clazz);
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#isPropertyValueAssignableTo(java.lang.String, java.lang.String, java.lang.String, java.lang.Class)
 	 */
-	public boolean isPropertyValueAssignableTo(String documentUri, String id, String propertyName, Class<?> clazz)
+	@Override
+	public boolean isPropertyValueAssignableTo(String objectUri, PropertyDescriptor propertyDescriptor, Class<?> clazz, String specVersion)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
 		Objects.requireNonNull(clazz, "Missing required class");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not check property for assignability.");
-			throw new SpdxRdfException("The document has not been created.  Can not check property for assignability.");
-		}
-		return modelManager.isPropertyValueAssignableTo(id, propertyName, clazz);
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		return modelManager.isPropertyValueAssignableTo(id, propertyDescriptor.getName(), clazz);
 	}
 
 	/* (non-Javadoc)
 	 * @see org.spdx.storage.IModelStore#isCollectionProperty(java.lang.String, java.lang.String, java.lang.String)
 	 */
-	public boolean isCollectionProperty(String documentUri, String id, String propertyName)
+	public boolean isCollectionProperty(String objectUri, PropertyDescriptor propertyDescriptor)
 			throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		Objects.requireNonNull(propertyName, "Missing required property name");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" has not been created.  Can not check property for collection.");
-			throw new SpdxRdfException("The document has not been created.  Can not check property for collection.");
-		}
-		return modelManager.isCollectionProperty(id, propertyName);
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		Objects.requireNonNull(propertyDescriptor, "Missing required property descriptor");
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
+		return modelManager.isCollectionProperty(id, propertyDescriptor.getName());
 	}
 
 	@Override
@@ -435,9 +484,8 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	}
 
 	@Override
-	public IModelStoreLock enterCriticalSection(String documentUri, boolean readLockRequested) throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		RdfSpdxDocumentModelManager modelManager = getOrCreateModelManager(documentUri);
+	public IModelStoreLock enterCriticalSection(boolean readLockRequested) throws InvalidSPDXAnalysisException {
+		checkClosed();
 		return modelManager.enterCriticalSection(readLockRequested);
 	}
 	
@@ -455,7 +503,8 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		    throw new FileNotFoundException(fileNameOrUrl + " not found.");
 		}
 		try {
-			return deSerialize(spdxRdfInput, overwrite);
+			SpdxDocument doc = deSerialize(spdxRdfInput, overwrite);
+			return doc.getDocumentUri();
 		} finally {
 			try {
 				spdxRdfInput.close();
@@ -481,19 +530,21 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	}
 	
 	/**
-	 * @return the spdx doc node from the model
+	 * @return the spdx doc nodes from the model
 	 */
-	public static Node getSpdxDocNode(Model model) {
-		Node spdxDocNode = null;
-		Node rdfTypePredicate = model.getProperty(SpdxConstants.RDF_NAMESPACE, SpdxConstants.RDF_PROP_TYPE).asNode();
-		Node spdxDocObject = model.getProperty(SpdxConstants.SPDX_NAMESPACE, SpdxConstants.CLASS_SPDX_DOCUMENT).asNode();
+	public static List<Node> getSpdxDocNodes(Model model) {
+		Node rdfTypePredicate = model.getProperty(SpdxConstantsCompatV2.RDF_NAMESPACE, 
+				SpdxConstantsCompatV2.RDF_PROP_TYPE.getName()).asNode();
+		Node spdxDocObject = model.getProperty(SpdxConstantsCompatV2.SPDX_NAMESPACE, 
+				SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT).asNode();
 		Triple m = Triple.createMatch(null, rdfTypePredicate, spdxDocObject);
 		ExtendedIterator<Triple> tripleIter = model.getGraph().find(m);	// find the document
+		List<Node> retval = new ArrayList<>();
 		while (tripleIter.hasNext()) {
 			Triple docTriple = tripleIter.next();
-			spdxDocNode = docTriple.getSubject();
+			retval.add(docTriple.getSubject());
 		}
-		return spdxDocNode;
+		return retval;
 	}
 	
 	/**
@@ -501,76 +552,102 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 * @return the document namespace for the document stored in the model
 	 * @throws InvalidSPDXAnalysisException 
 	 */
-	public static String getDocumentNamespace(Model model) throws InvalidSPDXAnalysisException {
-		Node documentNode = getSpdxDocNode(model);
-		if (documentNode == null) {
-			throw(new InvalidSPDXAnalysisException("Invalid model - must contain an SPDX Document"));
+	public static List<String> getDocumentNamespaces(Model model) throws InvalidSPDXAnalysisException {
+		List<String> retval = new ArrayList<>();
+		for (Node documentNode:getSpdxDocNodes(model)) {
+			if (documentNode == null) {
+				throw(new InvalidSPDXAnalysisException("Invalid model - must contain an SPDX Document"));
+			}
+			if (!documentNode.isURI()) {
+				throw(new InvalidSPDXAnalysisException("SPDX Documents must have a unique URI"));
+			}
+			String docUri = documentNode.getURI();
+			retval.add(formDocNamespace(docUri));
 		}
-		if (!documentNode.isURI()) {
-			throw(new InvalidSPDXAnalysisException("SPDX Documents must have a unique URI"));
-		}
-		String docUri = documentNode.getURI();
-		return formDocNamespace(docUri);
+		return retval;
 	}
 
 	@Override
-	public void serialize(String documentUri, OutputStream stream) throws InvalidSPDXAnalysisException, IOException {
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			logger.error("The document "+documentUri+" does not exist.");
-			throw new InvalidSPDXAnalysisException("The document "+documentUri+" does not exist.");
+	public void serialize(OutputStream stream) throws InvalidSPDXAnalysisException, IOException {
+		checkClosed();
+		modelManager.serialize(stream, outputFormat);
+	}
+	
+	@Override
+	public void serialize(OutputStream stream, @Nullable CoreModelObject spdxDocument) throws InvalidSPDXAnalysisException, IOException {
+		checkClosed();
+		if (Objects.nonNull(spdxDocument)) {
+			if (!(spdxDocument instanceof SpdxDocument)) {
+				logger.error("Attempting to serialize "+spdxDocument.getClass().getName()+" which is not an SpdxDocument");
+				throw new InvalidSPDXAnalysisException("Attempting to serialize "+spdxDocument.getClass().getName()+" which is not an SpdxDocument");
+			}
+			if (!this.documentUri.equals(((SpdxDocument)spdxDocument).getDocumentUri())) {
+				logger.error(((SpdxDocument)spdxDocument).getDocumentUri() + " not found in model store");
+				throw new InvalidSPDXAnalysisException(((SpdxDocument)spdxDocument).getDocumentUri() + " not found in model store");
+			}
 		}
 		modelManager.serialize(stream, outputFormat);
 	}
 
 	@Override
-	public String deSerialize(InputStream stream, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
+	public SpdxDocument deSerialize(InputStream stream, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
 		Model model = ModelFactory.createDefaultModel();
 		model.read(stream, null, this.outputFormat.getType());
-		String documentNamespace = getDocumentNamespace(model);
-		RdfSpdxDocumentModelManager modelManager = new RdfSpdxDocumentModelManager(documentNamespace, model);
+		List<String> documentNamespaces = getDocumentNamespaces(model);
+		if (documentNamespaces.size() > 1) {
+			throw new InvalidSPDXAnalysisException("Can only deserialize SPDX version 2 RDF documents with a single SPDX document");
+		}
+		if (documentNamespaces.isEmpty()) {
+			throw new InvalidSPDXAnalysisException("Missing SPDX document");
+		}
+		String documentNamespace = documentNamespaces.get(0);
 		CompatibilityUpgrader.upgrade(model, documentNamespace);
-		RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentNamespace, modelManager);
-		if (!Objects.isNull(previousModel))  {
+		if (Objects.nonNull(modelManager) && !getDocumentNamespaces(modelManager.getModel()).isEmpty()) {
 			if (overwrite) {
 				logger.warn("Overwriting previous model from file for document URI "+documentNamespace);
-				documentUriModelMap.put(documentNamespace, modelManager);
 			} else {
-				throw new SpdxRdfException("Document "+documentNamespace+" is already open in the RDF Store");
+				throw new SpdxRdfException("RDF Store contains data and overwrite is set to false");
 			}
 		}
-		return documentNamespace;
+		this.modelManager = new RdfSpdxModelManager(documentNamespace, model);
+		this.documentUri = documentNamespace;
+		
+		@SuppressWarnings("unchecked")
+		Stream<SpdxDocument> documentStream = (Stream<SpdxDocument>)SpdxModelFactory.getSpdxObjects(this, null, SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, 
+				documentNamespace + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, documentNamespace);
+		List<SpdxDocument> documents = documentStream.collect(Collectors.toList());
+		if (documents.isEmpty()) {
+			logger.error("No SPDX document found in file");;
+			throw new InvalidSPDXAnalysisException("No SPDX document was found in file");
+		}
+		return documents.get(0);
 	}
 	
 	
     /**
      * Deserialize an RDF stream without an enclosing document
-     * @param stream
-     * @param documentNamespace
-     * @return the documentNamespace
+     * @param stream stream containing the SPDX data
+     * @param documentNamespace document namespace to use
      * @throws InvalidSPDXAnalysisException
      * @throws IOException
      */
-	public String deSerialize(InputStream stream, boolean overwrite, String documentNamespace) throws InvalidSPDXAnalysisException, IOException {
+	public void deSerialize(InputStream stream, boolean overwrite, String documentNamespace) throws InvalidSPDXAnalysisException, IOException {
         Model model = ModelFactory.createDefaultModel();
         model.read(stream, null, this.outputFormat.getType());
-        RdfSpdxDocumentModelManager modelManager = new RdfSpdxDocumentModelManager(documentNamespace, model);
         CompatibilityUpgrader.upgrade(model, documentNamespace);
-        RdfSpdxDocumentModelManager previousModel = documentUriModelMap.putIfAbsent(documentNamespace, modelManager);
-        if (!Objects.isNull(previousModel))  {
+        if (!getDocumentNamespaces(modelManager.getModel()).isEmpty())  {
             if (overwrite) {
                 logger.warn("Overwriting previous model from file for document URI "+documentNamespace);
-                documentUriModelMap.put(documentNamespace, modelManager);
             } else {
                 throw new SpdxRdfException("Document "+documentNamespace+" is already open in the RDF Store");
             }
         }
-        return documentNamespace;
+        this.modelManager = new RdfSpdxModelManager(documentNamespace, model);
+        this.documentUri = documentNamespace;
     }
 
 	@Override
 	public Optional<String> getCaseSensisitiveId(String documentUri, String caseInsensisitiveId) {
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
 		if (Objects.isNull(modelManager)) {
 			return Optional.empty();
 		}
@@ -578,39 +655,32 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	}
 
 	@Override
-	public Optional<TypedValue> getTypedValue(String documentUri, String id) throws InvalidSPDXAnalysisException {
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
+	public Optional<TypedValue> getTypedValue(String objectUri) throws InvalidSPDXAnalysisException {
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		if (!isAnon(objectUri) && !objectUri.startsWith(documentUri + "#") && 
+				!objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX) &&
+				!objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_URL)) {
 			return Optional.empty();
 		} else {
+			String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
 			return modelManager.getTypedValue(id);
 		}
 	}
 
 	@Override
-	public void delete(String documentUri, String id) throws InvalidSPDXAnalysisException {
-		Objects.requireNonNull(documentUri, "Missing required document URI");
-		Objects.requireNonNull(id, "Missing required ID");
-		RdfSpdxDocumentModelManager modelManager = documentUriModelMap.get(documentUri);
-		if (Objects.isNull(modelManager)) {
-			throw new SpdxIdNotFoundException("Can not delete - document URI "+documentUri+" does not exist");
-		}
-		if (!modelManager.getCasesensitiveId(id).isPresent()) {
-			throw new SpdxIdNotFoundException("Can not delete - element ID "+id+" does not exist");
-		}
+	public void delete(String objectUri) throws InvalidSPDXAnalysisException {
+		checkClosed();
+		Objects.requireNonNull(objectUri, "Missing required Object URI");
+		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
 		modelManager.delete(id);
 	}
 
 	@Override
 	public void close() throws Exception {
-		Iterator<RdfSpdxDocumentModelManager> modelManagerIter = documentUriModelMap.values().iterator();
-		List<RdfSpdxDocumentModelManager> modelManagersToClose = new ArrayList<>();
-		while (modelManagerIter.hasNext()) {
-			modelManagersToClose.add(modelManagerIter.next());	// Make a copy to prevent collisions of closes
-		}
-		documentUriModelMap.clear();
-		for (RdfSpdxDocumentModelManager modelManager:modelManagersToClose) {
+		if (Objects.nonNull(modelManager)) {
 			modelManager.close();
+			modelManager = null;
 		}
 	}
 }

@@ -40,7 +40,6 @@ import java.util.Spliterators;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -66,20 +65,20 @@ import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.vocabulary.RDF;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spdx.library.InvalidSPDXAnalysisException;
-import org.spdx.library.SpdxConstants;
-import org.spdx.library.SpdxInvalidIdException;
-import org.spdx.library.model.DuplicateSpdxIdException;
-import org.spdx.library.model.IndividualUriValue;
-import org.spdx.library.model.SimpleUriValue;
-import org.spdx.library.model.SpdxIdNotFoundException;
-import org.spdx.library.model.SpdxInvalidTypeException;
-import org.spdx.library.model.SpdxModelFactory;
-import org.spdx.library.model.TypedValue;
-import org.spdx.library.model.enumerations.SpdxEnumFactory;
-import org.spdx.library.model.license.ListedLicenses;
+import org.spdx.core.IndividualUriValue;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.SimpleUriValue;
+import org.spdx.core.SpdxIdNotFoundException;
+import org.spdx.core.SpdxInvalidIdException;
+import org.spdx.core.SpdxInvalidTypeException;
+import org.spdx.core.TypedValue;
+import org.spdx.library.ListedLicenses;
+import org.spdx.library.model.v2.SpdxConstantsCompatV2;
+import org.spdx.library.model.v2.SpdxModelFactoryCompatV2;
+import org.spdx.library.model.v3_0_1.SpdxEnumFactory;
 import org.spdx.library.referencetype.ListedReferenceTypes;
 import org.spdx.storage.IModelStore.IdType;
+import org.spdx.storage.compatv2.CompatibleModelStoreWrapper;
 import org.spdx.storage.IModelStore.IModelStoreLock;
 
 /**
@@ -93,18 +92,16 @@ import org.spdx.storage.IModelStore.IModelStoreLock;
  * @author Gary O'Neall
  *
  */
-public class RdfSpdxDocumentModelManager implements IModelStoreLock {
-    
+public class RdfSpdxModelManager implements IModelStoreLock {
 	
-	static final Logger logger = LoggerFactory.getLogger(RdfSpdxDocumentModelManager.class.getName());
+	static final Logger logger = LoggerFactory.getLogger(RdfSpdxModelManager.class.getName());
 	
-	static final String RDF_TYPE = SpdxConstants.RDF_NAMESPACE + SpdxConstants.RDF_PROP_TYPE;
+	static final String RDF_TYPE = SpdxConstantsCompatV2.RDF_NAMESPACE + SpdxConstantsCompatV2.RDF_PROP_TYPE.getName();
 	
-	static final Set<String> LISTED_LICENSE_CLASSES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(SpdxConstants.LISTED_LICENSE_URI_CLASSES)));
+	static final Set<String> LISTED_LICENSE_CLASSES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(SpdxConstantsCompatV2.LISTED_LICENSE_URI_CLASSES)));
 
-    private static final String HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX = SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX.replaceAll("http:", "https:");
+    private static final String HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX = SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX.replaceAll("http:", "https:");
     
-    private static final Pattern LICENSE_NAMESPACE_PATTERN = Pattern.compile("(http:|https:)"+SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX.substring("http:".length())+".+");
     /**
      * subset of the listed license namespace to be used for matching
      */
@@ -143,8 +140,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			} catch (InvalidSPDXAnalysisException e) {
 				throw new RuntimeException(e);
 			}
-		}
-		
+		}	
 	}
 	
 	 /**
@@ -198,12 +194,14 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	private Property typeProperty;
 
 	private String documentNamespace;
+	
+	private String specVersion;
 
 	/**
 	 * @param documentUri Unique URI for this document
 	 * @param model Model used to store this document
 	 */
-	public RdfSpdxDocumentModelManager(String documentUri, Model model) {
+	public RdfSpdxModelManager(String documentUri, Model model) {
 		Objects.requireNonNull(documentUri, "Missing required document URI");
 		Objects.requireNonNull(model, "Missing required model");
 		this.documentUri = documentUri;
@@ -212,6 +210,17 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		typeProperty = model.createProperty(RDF_TYPE);
 		model.register(nextIdListener);
 		updateCounters();
+		if (this.exists(SpdxConstantsCompatV2.SPDX_DOCUMENT_ID)) {
+			try {
+				this.specVersion = (String)getPropertyValue(SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, 
+						SpdxConstantsCompatV2.PROP_SPDX_SPEC_VERSION.getName()).orElse(CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION);
+			} catch (InvalidSPDXAnalysisException e) {
+				logger.warn("Exception getting the SPDX spec version",e);
+				this.specVersion = CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION;
+			}
+		} else {
+			this.specVersion = CompatibleModelStoreWrapper.LATEST_SPDX_2X_VERSION;
+		}
 	}
 	
 	/**
@@ -310,8 +319,8 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		Objects.requireNonNull(node);
 		if (node.isResource() && !model.containsResource(node) && !node.isAnon()) {
 			String id = node.asResource().getLocalName();
-			if (id.startsWith(SpdxConstants.EXTERNAL_DOC_REF_PRENUM) || id.startsWith(SpdxConstants.NON_STD_LICENSE_ID_PRENUM) ||
-					id.startsWith(SpdxConstants.SPDX_ELEMENT_REF_PRENUM)) {
+			if (id.startsWith(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM) || id.startsWith(SpdxConstantsCompatV2.NON_STD_LICENSE_ID_PRENUM) ||
+					id.startsWith(SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM)) {
 				this.idCaseSensitiveMap.remove(id.toLowerCase());
 			}
 		}
@@ -332,8 +341,8 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			if (Objects.isNull(id)) {
 				return;
 			}
-			if (id.startsWith(SpdxConstants.EXTERNAL_DOC_REF_PRENUM) || id.startsWith(SpdxConstants.NON_STD_LICENSE_ID_PRENUM) ||
-					id.startsWith(SpdxConstants.SPDX_ELEMENT_REF_PRENUM)) {
+			if (id.startsWith(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM) || id.startsWith(SpdxConstantsCompatV2.NON_STD_LICENSE_ID_PRENUM) ||
+					id.startsWith(SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM)) {
 				String previous = idCaseSensitiveMap.put(id.toLowerCase(), id);
 				if (Objects.nonNull(previous)) {
 					logger.warn("Possibly ambiguous ID being introduced.  "+previous+" is being replaced by "+id);
@@ -393,7 +402,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
                 resource = ResourceFactory.createResource(idToUriInDocument(id));
                 if (!model.containsResource(resource)) {
                     // Try listed license URL
-                    resource = ResourceFactory.createResource(SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX + id);
+                    resource = ResourceFactory.createResource(SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX + id);
                 }
                 if (!model.containsResource(resource)) {
                     // Try listed license URL with HTTPS prefix - not correct, but we'll go ahead and match as a listed license
@@ -436,7 +445,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				}
 			} else {
 				// Try listed license URL
-				resource = model.createResource(SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX + id);
+				resource = model.createResource(SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX + id);
 				if (!model.containsResource(resource)) {
 				    // Check to see if it is defined with "https" instead of "http" - technically incorrect
 				    // but we'll allow it for compatibility
@@ -448,7 +457,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 							!ListedLicenses.getListedLicenses().isSpdxListedLicenseId(id)) {
 						// Try listed reference types
 						try {
-							if (!ListedReferenceTypes.getListedReferenceTypes().isListedReferenceType(new URI(SpdxConstants.SPDX_LISTED_REFERENCE_TYPES_PREFIX + id))) {
+							if (!ListedReferenceTypes.getListedReferenceTypes().isListedReferenceType(new URI(SpdxConstantsCompatV2.SPDX_LISTED_REFERENCE_TYPES_PREFIX + id))) {
 								logger.error("ID "+id+" does not exist in the model.");
 								throw new SpdxInvalidIdException("ID "+id+" does not exist in the model.");
 							}
@@ -474,6 +483,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			return documentUri + "#" + URLEncoder.encode(id, StandardCharsets.UTF_8.name());
 		} catch (UnsupportedEncodingException e) {
 			// This should never happen
+			logger.warn("Unexpected encoding error for id "+id);
 			return documentUri + "#" + id;
 		}
 	}
@@ -504,26 +514,31 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 
 	/**
 	 * Gets an existing or creates a new resource with and ID and type
-	 * @param id ID used in the SPDX model
+	 * @param objectUri uri or anon type string
 	 * @param type SPDX Type
 	 * @return the resource
 	 * @throws SpdxInvalidIdException
 	 * @throws DuplicateSpdxIdException 
 	 */
-	protected Resource getOrCreate(String id, String type) throws SpdxInvalidIdException {
-		Objects.requireNonNull(id, "Missing required ID");
+	protected Resource getOrCreate(String objectUri, String type) throws SpdxInvalidIdException {
+		Objects.requireNonNull(objectUri, "Missing required object URI");
 		Objects.requireNonNull(type, "Missing required type");
 		Resource rdfType = SpdxResourceFactory.typeToResource(type);
 		model.enterCriticalSection(false);
 		try {
 			if (LISTED_LICENSE_CLASSES.contains(type)) {
-				return model.createResource(SpdxConstants.LISTED_LICENSE_NAMESPACE_PREFIX + id, rdfType);
-			} else if (isAnonId(id)) {
-				Resource retval = model.createResource(idToAnonId(id));
+				if (!objectUri.startsWith(SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX)) {
+					String id = objectUri.substring(objectUri.indexOf('#')+1);
+					return model.createResource(SpdxConstantsCompatV2.LISTED_LICENSE_NAMESPACE_PREFIX + id, rdfType);
+				} else {
+					return model.createResource(objectUri, rdfType);
+				}
+			} else if (isAnonId(objectUri)) {
+				Resource retval = model.createResource(idToAnonId(objectUri));
 				retval.addProperty(typeProperty, rdfType);
 				return retval;
 			} else {
-				return model.createResource(idToUriInDocument(id), rdfType);
+				return model.createResource(objectUri, rdfType);
 			}
 		} finally {
 			model.leaveCriticalSection();
@@ -594,7 +609,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		Objects.requireNonNull(value, "Missing required value");
 		model.enterCriticalSection(false);
 		try {
-			if (SpdxConstants.PROP_DOCUMENT_NAMESPACE.equals(propertyName)) {
+			if (SpdxConstantsCompatV2.PROP_DOCUMENT_NAMESPACE.getName().equals(propertyName)) {
 				// this is the namespace for the model itself
 				setDefaultNsPrefix(value);
 			} else {
@@ -643,7 +658,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			return model.createTypedLiteral(value);
 		} else if (value instanceof TypedValue) {
 			TypedValue tv = (TypedValue)value;
-			return getOrCreate(tv.getId(), tv.getType());
+			return getOrCreate(tv.getObjectUri(), tv.getType());
 		} else if (value instanceof IndividualUriValue) {
 			return model.createResource(((IndividualUriValue)value).getIndividualURI());
 		} else {
@@ -672,8 +687,9 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 					// If there is no locally stored property for a listed license or exception
 					// fetch it from listed licenses store
 					try {
-						return ListedLicenses.getListedLicenses().getLicenseModelStore()
-								.getValue(HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX, id, propertyName);
+						return ListedLicenses.getListedLicenses().getLicenseModelStoreCompatV2()
+								.getValue(HTTPS_LISTED_LICENSE_NAMESPACE_PREFIX + id, 
+										CompatibleModelStoreWrapper.propNameToPropDescriptor(propertyName));
 					} catch(SpdxIdNotFoundException e) {
 						return Optional.empty();
 					}
@@ -706,8 +722,8 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			return false;
 		}
 		String sValueTypeStr = sValueType.get();
-		return SpdxConstants.CLASS_SPDX_LISTED_LICENSE.equals(sValueTypeStr) || 
-				SpdxConstants.CLASS_SPDX_LISTED_LICENSE_EXCEPTION.equals(sValueTypeStr);
+		return SpdxConstantsCompatV2.CLASS_SPDX_LISTED_LICENSE.equals(sValueTypeStr) || 
+				SpdxConstantsCompatV2.CLASS_SPDX_LISTED_LICENSE_EXCEPTION.equals(sValueTypeStr);
 	}
 
 	/**
@@ -733,25 +749,26 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		}
 		if (sValueType.isPresent()) {
 			if (propertyValue.isURIResource() &&
-					(SpdxConstants.CLASS_SPDX_REFERENCE_TYPE.equals(sValueType.get()) ||
+					(SpdxConstantsCompatV2.CLASS_SPDX_REFERENCE_TYPE.equals(sValueType.get()) ||
 					!this.documentNamespace.equals(propertyValue.asResource().getNameSpace()) &&
-					SpdxConstants.EXTERNAL_SPDX_ELEMENT_URI_PATTERN.matcher(propertyValue.asResource().getURI()).matches())) {
+					SpdxConstantsCompatV2.EXTERNAL_SPDX_ELEMENT_URI_PATTERN.matcher(propertyValue.asResource().getURI()).matches())) {
 				// External document referenced element
 				return Optional.of(new SimpleUriValue(propertyValue.asResource().getURI()));
 			} else {
-				if (SpdxConstants.CLASS_SPDX_LICENSE.equals(sValueType.get())) {
+				if (SpdxConstantsCompatV2.CLASS_SPDX_LICENSE.equals(sValueType.get())) {
 					// change to a concrete class - right now, listed licenses are the only concrete class
-					sValueType = Optional.of(SpdxConstants.CLASS_SPDX_LISTED_LICENSE);
+					sValueType = Optional.of(SpdxConstantsCompatV2.CLASS_SPDX_LISTED_LICENSE);
 				}
-				return Optional.of(new TypedValue(resourceToId(propertyValue.asResource()), sValueType.get()));
+				return Optional.of(new TypedValue(resourceToObjectUri(propertyValue.asResource()), sValueType.get(), specVersion));
 			}
 		} else {
 			if (propertyValue.isURIResource()) {
 				final String propertyUri = propertyValue.asResource().getURI();
-				if (propertyUri.contains(SPDX_LISTED_LICENSE_SUBPREFIX) && !propertyUri.endsWith(SpdxConstants.NONE_VALUE) && 
-						!propertyUri.endsWith(SpdxConstants.NOASSERTION_VALUE)) {
+				if (propertyUri.contains(SPDX_LISTED_LICENSE_SUBPREFIX) && !propertyUri.endsWith(SpdxConstantsCompatV2.NONE_VALUE) && 
+						!propertyUri.endsWith(SpdxConstantsCompatV2.NOASSERTION_VALUE)) {
 					// Must be a listed license - Note that the URI may be http: or https:
-					return Optional.of(new TypedValue(resourceToId(propertyValue.asResource()), SpdxConstants.CLASS_SPDX_LISTED_LICENSE));
+					return Optional.of(new TypedValue(resourceToObjectUri(propertyValue.asResource()), 
+							SpdxConstantsCompatV2.CLASS_SPDX_LISTED_LICENSE, specVersion));
 				} else {
 					// Assume this is an individual value
 					IndividualUriValue iv = new IndividualUriValue() {
@@ -805,38 +822,24 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
             return Optional.of(literalValue);
         }
     }
-
+    
     /**
 	 * Obtain an ID from a resource
 	 * @param resource
 	 * @return ID formatted appropriately for use outside the RdfStore
 	 * @throws SpdxRdfException
 	 */
-	private String resourceToId(Resource resource) throws SpdxRdfException {
+	private String resourceToObjectUri(Resource resource) throws SpdxRdfException {
 		Objects.requireNonNull(resource, "Mising required resource");
 		if (resource.isAnon()) {
 			return RdfStore.ANON_PREFIX + resource.getId();
 		} else if (resource.isURIResource()) {
-			String retval;
-			if (resource.getURI().contains("%")) {
-				// there seems to be a bug in getLocalName() if the ID contains a %-encoding
-				if (resource.getURI().contains("#")) {
-					retval = resource.getURI().substring(resource.getURI().lastIndexOf('#')+1);
-				} else {
-					retval = resource.getURI().substring(resource.getURI().lastIndexOf('/')+1);
-				}
-			} else if (LICENSE_NAMESPACE_PATTERN.matcher(resource.getURI()).matches()) {
-				retval = resource.getURI().substring(resource.getURI().lastIndexOf('/')+1);
-			} else {
-				retval = resource.getLocalName();
-			}
 			try {
-				retval = URLDecoder.decode(retval, StandardCharsets.UTF_8.name());
+				return URLDecoder.decode(resource.getURI(), StandardCharsets.UTF_8.name());
 			} catch (UnsupportedEncodingException e) {
 				logger.error("Unexpected URL decoding error for: "+resource.toString());
-				throw new SpdxRdfException("Unexpected URL decoding error");
+				return resource.getURI();
 			}
-			return retval;
 		} else {
 			logger.error("Attempting to convert unsupported resource type to an ID: "+resource.toString());
 			throw new SpdxRdfException("Only anonymous and URI resources can be converted to an ID");
@@ -852,16 +855,12 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 	public String getNextId(IdType idType) throws InvalidSPDXAnalysisException {
 		switch (idType) {
 		case Anonymous: return RdfStore.ANON_PREFIX+String.valueOf(model.createResource().getId());
-		case LicenseRef: return SpdxConstants.NON_STD_LICENSE_ID_PRENUM+RdfStore.GENERATED+String.valueOf(getNextLicenseId());
-		case DocumentRef: return SpdxConstants.EXTERNAL_DOC_REF_PRENUM+RdfStore.GENERATED+String.valueOf(getNextDocumentId());
-		case SpdxId: return SpdxConstants.SPDX_ELEMENT_REF_PRENUM+RdfStore.GENERATED+String.valueOf(getNextSpdxId());
+		case LicenseRef: return SpdxConstantsCompatV2.NON_STD_LICENSE_ID_PRENUM+RdfStore.GENERATED+String.valueOf(getNextLicenseId());
+		case DocumentRef: return SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM+RdfStore.GENERATED+String.valueOf(getNextDocumentId());
+		case SpdxId: return SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM+RdfStore.GENERATED+String.valueOf(getNextSpdxId());
 		case ListedLicense: {
 			logger.error("Can not generate a license ID for a Listed License");
 			throw new InvalidSPDXAnalysisException("Can not generate a license ID for a Listed License");
-		}
-		case Literal: {
-			logger.error("Can not generate a license ID for a Literal");
-			throw new InvalidSPDXAnalysisException("Can not generate a license ID for a Literal");
 		}
 		default: {
 			logger.error("Unknown ID type for next ID: "+idType.toString());
@@ -920,7 +919,9 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 			RDFNode subject = qs.get("s");
 			RDFNode type = qs.get("type");
 			try {
-				return new TypedValue(resourceToId(subject.asResource()), SpdxResourceFactory.resourceToSpdxType(type.asResource()).get());
+				
+				return new TypedValue(resourceToObjectUri(subject.asResource()), 
+						SpdxResourceFactory.resourceToSpdxType(type.asResource()).get(), specVersion);
 			} catch (Exception e) {
 				logger.error("Unexpected exception converting to type");
 				throw new RuntimeException(e);
@@ -1078,7 +1079,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 					idClass.getURI(), property.getURI());
 			if (!classUriRestrictions.isEmpty()) {
 				for (String classUriRestriction:classUriRestrictions) {
-					if (!clazz.isAssignableFrom(SpdxModelFactory.classUriToClass(classUriRestriction))) {
+					if (!clazz.isAssignableFrom(SpdxModelFactoryCompatV2.classUriToClass(classUriRestriction))) {
 						return false;
 					}
 				}
@@ -1150,7 +1151,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				if (value.isPresent() && !clazz.isAssignableFrom(value.get().getClass())) {
 					if (value.get() instanceof TypedValue) {
 						try {
-							if (!clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)value.get()).getType()))) {
+							if (!clazz.isAssignableFrom(SpdxModelFactoryCompatV2.typeToClass(((TypedValue)value.get()).getType()))) {
 								return false;
 							}
 						} catch (InvalidSPDXAnalysisException e) {
@@ -1164,8 +1165,8 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 							if (!clazz.isAssignableFrom(spdxEnum.getClass())) {
 								return false;
 							}
-						} else if (!(SpdxConstants.URI_VALUE_NOASSERTION.equals(uri) ||
-								SpdxConstants.URI_VALUE_NONE.equals(uri))) {
+						} else if (!(SpdxConstantsCompatV2.URI_VALUE_NOASSERTION.equals(uri) ||
+								SpdxConstantsCompatV2.URI_VALUE_NONE.equals(uri))) {
 							return false;
 						}
 					} else {
@@ -1214,7 +1215,7 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				}
 				if (objectValue.get() instanceof TypedValue) {
 					try {
-						return clazz.isAssignableFrom(SpdxModelFactory.typeToClass(((TypedValue)objectValue.get()).getType()));
+						return clazz.isAssignableFrom(SpdxModelFactoryCompatV2.typeToClass(((TypedValue)objectValue.get()).getType()));
 					} catch (InvalidSPDXAnalysisException e) {
 						logger.error("Error converting typed value to class",e);
 						return false;
@@ -1222,10 +1223,10 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				}
 				if (objectValue.get() instanceof IndividualUriValue) {
 	                String uri = ((IndividualUriValue)objectValue.get()).getIndividualURI();
-	                if (SpdxConstants.URI_VALUE_NOASSERTION.equals(uri)) {
+	                if (SpdxConstantsCompatV2.URI_VALUE_NOASSERTION.equals(uri)) {
 	                    return true;
 	                }
-	                if (SpdxConstants.URI_VALUE_NONE.equals(uri)) {
+	                if (SpdxConstantsCompatV2.URI_VALUE_NONE.equals(uri)) {
 	                    return true;
 	                }
 	                Enum<?> spdxEnum = SpdxEnumFactory.uriToEnum.get(uri);
@@ -1270,9 +1271,9 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 		    if (idResource.isURIResource() && idResource.getURI().contains(SPDX_LISTED_LICENSE_SUBPREFIX)) {
 		        String licenseOrExceptionId = idResource.getURI().substring(idResource.getURI().lastIndexOf('/')+1);
 		        if (ListedLicenses.getListedLicenses().isSpdxListedLicenseId(licenseOrExceptionId)) {
-		            return model.createResource(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_LISTED_LICENSE);
+		            return model.createResource(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_LISTED_LICENSE);
 		        } else if (ListedLicenses.getListedLicenses().isSpdxListedExceptionId(licenseOrExceptionId)) {
-		            return model.createResource(SpdxConstants.SPDX_NAMESPACE + SpdxConstants.CLASS_SPDX_LISTED_LICENSE_EXCEPTION);
+		            return model.createResource(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_LISTED_LICENSE_EXCEPTION);
 		        }
 		    }
 			logger.error("ID "+idResource+" does not have a type.");
@@ -1340,20 +1341,27 @@ public class RdfSpdxDocumentModelManager implements IModelStoreLock {
 				if (Objects.isNull(idClass)) {
 					return Optional.empty();
 				}
-				Class<?> clazz = SpdxModelFactory.classUriToClass(idClass.getURI());
+				Class<?> clazz = SpdxModelFactoryCompatV2.classUriToClass(idClass.getURI());
 				if (Objects.isNull(clazz)) {
 					return Optional.empty();
 				}
-				String type = SpdxModelFactory.SPDX_CLASS_TO_TYPE.get(clazz);
+				String type = SpdxModelFactoryCompatV2.SPDX_CLASS_TO_TYPE.get(clazz);
 				if (Objects.isNull(type)) {
 					return Optional.empty();
 				}
-				return Optional.of(new TypedValue(id, type));
+				return Optional.of(new TypedValue(resourceToObjectUri(idResource), type, specVersion));
 			} catch(SpdxInvalidIdException ex) {
 				return Optional.empty();
 			}
 		} finally {
 			model.leaveCriticalSection();
 		}	
+	}
+
+	/**
+	 * @return the Jena model
+	 */
+	public Model getModel() {
+		return this.model;
 	}
 }

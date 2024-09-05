@@ -1,3 +1,4 @@
+package org.spdx.library.model.compat.v2;
 /**
  * Copyright (c) 2020 Source Auditor Inc.
  *
@@ -15,15 +16,21 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package org.spdx.library.model;
+
 
 
 import java.util.List;
 
-import org.spdx.library.DefaultModelStore;
-import org.spdx.library.InvalidSPDXAnalysisException;
+import org.spdx.core.DefaultModelStore;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
 import org.spdx.library.ModelCopyManager;
-import org.spdx.library.model.pointer.LineCharPointer;
+import org.spdx.library.model.v2.GenericModelObject;
+import org.spdx.library.model.v2.GenericSpdxElement;
+import org.spdx.library.model.v2.SpdxElement;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v2.pointer.LineCharPointer;
+import org.spdx.library.model.v3_0_1.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
 
 import junit.framework.TestCase;
@@ -45,7 +52,9 @@ public class LineCharPointerTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
-		DefaultModelStore.reset(new RdfStore(), "http://test.document.uri/1", new ModelCopyManager());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
+		DefaultModelStore.initialize(new RdfStore("http://defaultdocument"), "http://defaultdocument", new ModelCopyManager());
 		gmo = new GenericModelObject();
 		REFERENCED1 = new GenericSpdxElement();
 		REFERENCED1.setName("referenced1");
@@ -61,7 +70,7 @@ public class LineCharPointerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.pointer.LineCharPointer#verify()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.pointer.LineCharPointer#verify()}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testVerify() throws InvalidSPDXAnalysisException {
@@ -82,7 +91,7 @@ public class LineCharPointerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.pointer.LineCharPointer#setLineNumber(java.lang.Integer)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.pointer.LineCharPointer#setLineNumber(java.lang.Integer)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testSetLineNumber() throws InvalidSPDXAnalysisException {
@@ -106,7 +115,7 @@ public class LineCharPointerTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.pointer.LineCharPointer#compareTo(org.spdx.library.model.SinglePointer)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.pointer.LineCharPointer#compareTo(org.spdx.library.model.compat.v2.compat.v2.SinglePointer)}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testCompareTo() throws InvalidSPDXAnalysisException {

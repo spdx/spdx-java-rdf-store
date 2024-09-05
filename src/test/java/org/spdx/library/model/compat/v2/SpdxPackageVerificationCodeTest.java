@@ -1,3 +1,4 @@
+package org.spdx.library.model.compat.v2;
 /**
  * Copyright (c) 2019 Source Auditor Inc.
  *
@@ -15,14 +16,19 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package org.spdx.library.model;
+
 
 import java.util.Arrays;
 import java.util.List;
 
-import org.spdx.library.DefaultModelStore;
-import org.spdx.library.InvalidSPDXAnalysisException;
+import org.spdx.core.DefaultModelStore;
+import org.spdx.core.IModelCopyManager;
+import org.spdx.core.InvalidSPDXAnalysisException;
+import org.spdx.core.ModelRegistry;
 import org.spdx.library.ModelCopyManager;
+import org.spdx.library.model.v2.SpdxModelInfoV2_X;
+import org.spdx.library.model.v2.SpdxPackageVerificationCode;
+import org.spdx.library.model.v3_0_1.SpdxModelInfoV3_0;
 import org.spdx.spdxRdfStore.RdfStore;
 import org.spdx.storage.IModelStore;
 import org.spdx.storage.IModelStore.IdType;
@@ -54,14 +60,16 @@ public class SpdxPackageVerificationCodeTest extends TestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
-		DefaultModelStore.reset(new RdfStore(), "http://test.document.uri/1", new ModelCopyManager());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV2_X());
+		ModelRegistry.getModelRegistry().registerModel(new SpdxModelInfoV3_0());
+		DefaultModelStore.initialize(new RdfStore("http://defaultdocument"), "http://defaultdocument", new ModelCopyManager());
 		IModelStore store = DefaultModelStore.getDefaultModelStore();
 		String docUri = DefaultModelStore.getDefaultDocumentUri();
-		ModelCopyManager copyManager = DefaultModelStore.getDefaultCopyManager();
+		IModelCopyManager copyManager = DefaultModelStore.getDefaultCopyManager();
 		VERIFICATION_CODES = new SpdxPackageVerificationCode[] {
-				new SpdxPackageVerificationCode(store, docUri,store.getNextId(IdType.Anonymous, docUri), copyManager, true),
-				new SpdxPackageVerificationCode(store, docUri,store.getNextId(IdType.Anonymous, docUri), copyManager, true),
-				new SpdxPackageVerificationCode(store, docUri,store.getNextId(IdType.Anonymous, docUri), copyManager, true)
+				new SpdxPackageVerificationCode(store, docUri,store.getNextId(IdType.Anonymous), copyManager, true),
+				new SpdxPackageVerificationCode(store, docUri,store.getNextId(IdType.Anonymous), copyManager, true),
+				new SpdxPackageVerificationCode(store, docUri,store.getNextId(IdType.Anonymous), copyManager, true)
 			};
 		for (int i = 0; i < VERIFICATION_CODES.length; i++) {
 			VERIFICATION_CODES[i].setValue(VALUES[i]);
@@ -77,7 +85,7 @@ public class SpdxPackageVerificationCodeTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackageVerificationCode#verify()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackageVerificationCode#verify()}.
 	 */
 	public void testVerify() {
 		List<String> verify = VERIFICATION_CODES[0].verify();
@@ -89,7 +97,7 @@ public class SpdxPackageVerificationCodeTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackageVerificationCode#setValue(java.lang.String)}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackageVerificationCode#setValue(java.lang.String)}.
 	 */
 	public void testSetValue() throws InvalidSPDXAnalysisException {
 		for (int i  = 0; i < VERIFICATION_CODES.length; i++) {
@@ -104,7 +112,7 @@ public class SpdxPackageVerificationCodeTest extends TestCase {
 	}
 
 	/**
-	 * Test method for {@link org.spdx.library.model.SpdxPackageVerificationCode#getExcludedFileNames()}.
+	 * Test method for {@link org.spdx.library.model.compat.v2.compat.v2.SpdxPackageVerificationCode#getExcludedFileNames()}.
 	 * @throws InvalidSPDXAnalysisException 
 	 */
 	public void testGetExcludedFileNames() throws InvalidSPDXAnalysisException {
