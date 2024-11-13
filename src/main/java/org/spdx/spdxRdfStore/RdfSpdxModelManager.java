@@ -824,7 +824,7 @@ public class RdfSpdxModelManager implements IModelStoreLock {
     }
     
     /**
-	 * Obtain an ID from a resource
+	 * Obtain an ObjectUri from a resource
 	 * @param resource
 	 * @return ID formatted appropriately for use outside the RdfStore
 	 * @throws SpdxRdfException
@@ -834,12 +834,7 @@ public class RdfSpdxModelManager implements IModelStoreLock {
 		if (resource.isAnon()) {
 			return RdfStore.ANON_PREFIX + resource.getId();
 		} else if (resource.isURIResource()) {
-			try {
-				return URLDecoder.decode(resource.getURI(), StandardCharsets.UTF_8.name());
-			} catch (UnsupportedEncodingException e) {
-				logger.error("Unexpected URL decoding error for: "+resource.toString());
-				return resource.getURI();
-			}
+			return resource.getURI();
 		} else {
 			logger.error("Attempting to convert unsupported resource type to an ID: "+resource.toString());
 			throw new SpdxRdfException("Only anonymous and URI resources can be converted to an ID");
