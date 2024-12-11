@@ -35,7 +35,6 @@ import org.apache.jena.ontology.OntProperty;
 import org.apache.jena.ontology.OntResource;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.SimpleSelector;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.slf4j.Logger;
@@ -331,11 +330,9 @@ public class SpdxOwlOntology {
 	 */
 	private void addPropertyRestrictions(OntClass ontClass, OntProperty property, List<Statement> propertyRestrictions) {	
 		if (ontClass.isRestriction()) {
-			if (model.listStatements(new SimpleSelector(ontClass, ON_PROPERTY_PROPERTY, property)).hasNext()) {
+			if (model.listStatements(ontClass, ON_PROPERTY_PROPERTY, property).hasNext()) {
 				// matches the property
-				ontClass.listProperties().forEachRemaining((Statement stmt) -> {
-					propertyRestrictions.add(stmt);
-				});
+				ontClass.listProperties().forEachRemaining(propertyRestrictions::add);
 			}
 		} else if (ontClass.isUnionClass()) {
 			ontClass.asUnionClass().listOperands().forEachRemaining((OntClass operand) -> {
