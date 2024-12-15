@@ -1,14 +1,14 @@
 /**
  * Copyright (c) 2020 Source Auditor Inc.
- *
+ * <p>
  * SPDX-License-Identifier: Apache-2.0
- * 
+ * <p>
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *
+ * <p>
  *       http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,7 +29,6 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import javax.annotation.Nullable;
 
@@ -60,6 +59,7 @@ import org.spdx.storage.compatv2.CompatibleModelStoreWrapper;
  * @author Gary O'Neall
  *
  */
+@SuppressWarnings("LoggingSimilarMessage")
 public class RdfStore implements IModelStore, ISerializableModelStore {
 	
 	static final Logger logger = LoggerFactory.getLogger(RdfStore.class.getName());
@@ -83,9 +83,9 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	/**
 	 * Create an RDF store and initialize it with an SPDX document deserialized from stream
 	 * Note that the stream must contain one and only one SPDX document in SPDX version 2.X format
-	 * @param stream
-	 * @throws IOException 
-	 * @throws InvalidSPDXAnalysisException 
+	 * @param stream input stream of a model
+	 * @throws IOException on IO error
+	 * @throws InvalidSPDXAnalysisException on SPDX parsing errors
 	 */
 	public RdfStore(InputStream stream) throws InvalidSPDXAnalysisException, IOException {
 		deSerialize(stream, false);
@@ -102,9 +102,9 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	/**
 	 * Create an RDF store and initialize it with an data deserialized from stream using the documentUri
 	 * for ID prefixes
-	 * @param stream
-	 * @throws IOException 
-	 * @throws InvalidSPDXAnalysisException 
+	 * @param stream stream of an RDF model
+	 * @throws IOException on IO error
+	 * @throws InvalidSPDXAnalysisException on SPDX parsing errors
 	 */
 	public RdfStore(InputStream stream, String documentUri) throws InvalidSPDXAnalysisException, IOException {
 		this.documentUri = documentUri;
@@ -193,7 +193,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		try {
 			id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
 		} catch (InvalidSPDXAnalysisException e) {
-			logger.warn("Unable to convert Object URI into a document URI + ID: "+objectUri);
+            logger.warn("Unable to convert Object URI into a document URI + ID: {}", objectUri);
 			return false;
 		}
 		return modelManager.exists(id);
@@ -221,7 +221,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		try {
 			id = CompatibleModelStoreWrapper.objectUriToId(false, objectUri, documentUri);
 		} catch (InvalidSPDXAnalysisException e) {
-			logger.warn("Error converting object URI to ID for URI: "+objectUri, e);
+            logger.warn("Error converting object URI to ID for URI: {}", objectUri, e);
 			return IdType.Unkown;
 		}
 		if (SpdxConstantsCompatV2.LICENSE_ID_PATTERN.matcher(id).matches()) {
@@ -265,8 +265,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		model.getGraph().getPrefixMapping().setNsPrefix("doap", SpdxConstantsCompatV2.DOAP_NAMESPACE);
 		model.getGraph().getPrefixMapping().setNsPrefix("ptr", SpdxConstantsCompatV2.RDF_POINTER_NAMESPACE);
 		model.getGraph().getPrefixMapping().setNsPrefix("rdfs", SpdxConstantsCompatV2.RDFS_NAMESPACE);
-		RdfSpdxModelManager modelManager = new RdfSpdxModelManager(documentUri, model);
-		return modelManager;
+        return new RdfSpdxModelManager(documentUri, model);
 	}
 
 	/* (non-Javadoc)
@@ -277,8 +276,8 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		checkClosed();
 		Objects.requireNonNull(objectUri, "Missing required object URI");
 		String id = CompatibleModelStoreWrapper.objectUriToId(this, objectUri, documentUri);
-		return StreamSupport.stream(modelManager.getPropertyValueNames(id).spliterator(), false)
-				.map(propName -> CompatibleModelStoreWrapper.propNameToPropDescriptor(propName))
+		return modelManager.getPropertyValueNames(id).stream()
+				.map(CompatibleModelStoreWrapper::propNameToPropDescriptor)
 				.collect(Collectors.toList());
 	}
 
@@ -491,11 +490,11 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	
 	/**
 	 * Load a document from a file or URL
-	 * @param fileNameOrUrl
+	 * @param fileNameOrUrl file name or URL of a serialized RDF model
 	 * @param overwrite if true, overwrite any existing documents with the same document URI
 	 * @return the DocumentURI of the SPDX document
-	 * @throws InvalidSPDXAnalysisException
-	 * @throws IOException 
+	 * @throws InvalidSPDXAnalysisException on SPDX parsing errors
+	 * @throws IOException on IO error
 	 */
 	public String loadModelFromFile(String fileNameOrUrl, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
 		InputStream spdxRdfInput = RDFDataMgr.open(fileNameOrUrl);
@@ -509,7 +508,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 			try {
 				spdxRdfInput.close();
 			} catch (IOException e) {
-				logger.warn("Error closing SPDX RDF file "+fileNameOrUrl,e);
+                logger.warn("Error closing SPDX RDF file {}", fileNameOrUrl, e);
 			}
 		}
 	}
@@ -517,7 +516,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	/**
 	 * Form the document namespace URI from the SPDX document URI
 	 * @param docUriString String form of the SPDX document URI
-	 * @return
+	 * @return document namespace
 	 */
 	private static String formDocNamespace(String docUriString) {
 		// just remove any fragments for the DOC URI
@@ -550,7 +549,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	/**
 	 * @param model model containing a single document
 	 * @return the document namespace for the document stored in the model
-	 * @throws InvalidSPDXAnalysisException 
+	 * @throws InvalidSPDXAnalysisException on SPDX parsing errors
 	 */
 	public static List<String> getDocumentNamespaces(Model model) throws InvalidSPDXAnalysisException {
 		List<String> retval = new ArrayList<>();
@@ -568,21 +567,21 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	}
 
 	@Override
-	public void serialize(OutputStream stream) throws InvalidSPDXAnalysisException, IOException {
+	public void serialize(OutputStream stream) throws InvalidSPDXAnalysisException {
 		checkClosed();
 		modelManager.serialize(stream, outputFormat);
 	}
 	
 	@Override
-	public void serialize(OutputStream stream, @Nullable CoreModelObject spdxDocument) throws InvalidSPDXAnalysisException, IOException {
+	public void serialize(OutputStream stream, @Nullable CoreModelObject spdxDocument) throws InvalidSPDXAnalysisException {
 		checkClosed();
 		if (Objects.nonNull(spdxDocument)) {
 			if (!(spdxDocument instanceof SpdxDocument)) {
-				logger.error("Attempting to serialize "+spdxDocument.getClass().getName()+" which is not an SpdxDocument");
+                logger.error("Attempting to serialize {} which is not an SpdxDocument", spdxDocument.getClass().getName());
 				throw new InvalidSPDXAnalysisException("Attempting to serialize "+spdxDocument.getClass().getName()+" which is not an SpdxDocument");
 			}
 			if (!this.documentUri.equals(((SpdxDocument)spdxDocument).getDocumentUri())) {
-				logger.error(((SpdxDocument)spdxDocument).getDocumentUri() + " not found in model store");
+                logger.error("{} not found in model store", ((SpdxDocument) spdxDocument).getDocumentUri());
 				throw new InvalidSPDXAnalysisException(((SpdxDocument)spdxDocument).getDocumentUri() + " not found in model store");
 			}
 		}
@@ -590,7 +589,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	}
 
 	@Override
-	public SpdxDocument deSerialize(InputStream stream, boolean overwrite) throws InvalidSPDXAnalysisException, IOException {
+	public SpdxDocument deSerialize(InputStream stream, boolean overwrite) throws InvalidSPDXAnalysisException {
 		Model model = ModelFactory.createDefaultModel();
 		model.read(stream, null, this.outputFormat.getType());
 		List<String> documentNamespaces = getDocumentNamespaces(model);
@@ -604,7 +603,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		CompatibilityUpgrader.upgrade(model, documentNamespace);
 		if (Objects.nonNull(modelManager) && !getDocumentNamespaces(modelManager.getModel()).isEmpty()) {
 			if (overwrite) {
-				logger.warn("Overwriting previous model from file for document URI "+documentNamespace);
+                logger.warn("Overwriting previous model from file for document URI {}", documentNamespace);
 			} else {
 				throw new SpdxRdfException("RDF Store contains data and overwrite is set to false");
 			}
@@ -617,7 +616,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 				documentNamespace + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID, documentNamespace);
 		List<SpdxDocument> documents = documentStream.collect(Collectors.toList());
 		if (documents.isEmpty()) {
-			logger.error("No SPDX document found in file");;
+			logger.error("No SPDX document found in file");
 			throw new InvalidSPDXAnalysisException("No SPDX document was found in file");
 		}
 		return documents.get(0);
@@ -628,16 +627,15 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
      * Deserialize an RDF stream without an enclosing document
      * @param stream stream containing the SPDX data
      * @param documentNamespace document namespace to use
-     * @throws InvalidSPDXAnalysisException
-     * @throws IOException
+     * @throws InvalidSPDXAnalysisException on SPDX parsing errors
      */
-	public void deSerialize(InputStream stream, boolean overwrite, String documentNamespace) throws InvalidSPDXAnalysisException, IOException {
+	public void deSerialize(InputStream stream, boolean overwrite, String documentNamespace) throws InvalidSPDXAnalysisException {
         Model model = ModelFactory.createDefaultModel();
         model.read(stream, null, this.outputFormat.getType());
         CompatibilityUpgrader.upgrade(model, documentNamespace);
         if (!getDocumentNamespaces(modelManager.getModel()).isEmpty())  {
             if (overwrite) {
-                logger.warn("Overwriting previous model from file for document URI "+documentNamespace);
+                logger.warn("Overwriting previous model from file for document URI {}", documentNamespace);
             } else {
                 throw new SpdxRdfException("Document "+documentNamespace+" is already open in the RDF Store");
             }

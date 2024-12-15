@@ -1,14 +1,14 @@
 /**
  * Copyright (c) 2020 Source Auditor Inc.
- *
+ * <p>
  * SPDX-License-Identifier: Apache-2.0
- * 
+ * <p>
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *
+ * <p>
  *       http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,6 +47,7 @@ import org.spdx.library.model.v2.SpdxConstantsCompatV2;
  * @author Gary O'Neall
  *
  */
+@SuppressWarnings("LoggingSimilarMessage")
 public class SpdxOwlOntology {
 	
 	static final Logger logger = LoggerFactory.getLogger(SpdxOwlOntology.class);
@@ -55,7 +56,7 @@ public class SpdxOwlOntology {
 	
 	static final String ONTOLOGY_PATH = "/resources/spdx-2-3-revision-2-ontology.owl.xml";
 	
-	private OntModel model;
+	private final OntModel model;
 	
 	Property PROP_MIN_CARDINALITY;
 	Property PROP_MIN_QUAL_CARDINALITY;
@@ -68,29 +69,12 @@ public class SpdxOwlOntology {
 	Property ON_CLASS_PROPERTY;
 	Property ON_DATA_RANGE_PROPERTY;
 	
-	static final Map<String, Class<? extends Object>> DATA_TYPE_TO_CLASS;
+	static final Map<String, Class<?>> DATA_TYPE_TO_CLASS;
 	
 	static {
 		// Note: We only use the types supported by the storage manager Integer, Boolean, String
-		Map<String, Class<? extends Object>> dataTypeMap = new HashMap<>();
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "string", String.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "hexBinary", String.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "anyURI", String.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "dateTime", String.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.RDFS_NAMESPACE + "Literal", String.class);
-		
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "int", Integer.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "integer", Integer.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "short", Integer.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "byte", Integer.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "unsignedShort", Integer.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "unsignedInt", Integer.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "unsignedByte", Integer.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "positiveInteger", Integer.class);
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "nonNegativeInteger", Integer.class);
-		
-		dataTypeMap.put(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "boolean", Boolean.class);
-		DATA_TYPE_TO_CLASS = Collections.unmodifiableMap(dataTypeMap);
+
+        DATA_TYPE_TO_CLASS = Map.ofEntries(Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "string", String.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "hexBinary", String.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "anyURI", String.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "dateTime", String.class), Map.entry(SpdxConstantsCompatV2.RDFS_NAMESPACE + "Literal", String.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "int", Integer.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "integer", Integer.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "short", Integer.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "byte", Integer.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "unsignedShort", Integer.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "unsignedInt", Integer.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "unsignedByte", Integer.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "positiveInteger", Integer.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "nonNegativeInteger", Integer.class), Map.entry(SpdxConstantsCompatV2.XML_SCHEMA_NAMESPACE + "boolean", Boolean.class));
 	}
 	
 	/**
@@ -142,8 +126,8 @@ public class SpdxOwlOntology {
 	
 	/**
 	 * Checks to see if a property name has been renamed from the OWL property name and returns the OWL compliant name
-	 * @param renamedPropertyUri
-	 * @return
+	 * @param renamedPropertyUri URI of the property
+	 * @return the OWL compliant name
 	 */
 	public static String checkGetOwlUriFromRenamed(String renamedPropertyUri) {
 		if (renamedPropertyUri.startsWith(SpdxConstantsCompatV2.SPDX_NAMESPACE) && 
@@ -157,8 +141,8 @@ public class SpdxOwlOntology {
 	
 	/**
 	 * Checks to see if a property name has been renamed from the OWL property URI and returns the renamed URI
-	 * @param owlPropertyUri
-	 * @return
+	 * @param owlPropertyUri URI for the OWL compliant property
+	 * @return if renamed, return the renamed URI
 	 */
 	public static String checkGetRenamedUri(String owlPropertyUri) {
 		if (owlPropertyUri.startsWith(SpdxConstantsCompatV2.SPDX_NAMESPACE) && 
@@ -173,9 +157,9 @@ public class SpdxOwlOntology {
 	/**
 	 * Search the ontology range for a property and return the Java class that best matches the property type
 	 * @param p property to search for the class range
-	 * @return
+	 * @return the Java class that best matches the property type
 	 */
-	public Optional<Class<? extends Object>> getPropertyClass(Property p) {
+	public Optional<Class<?>> getPropertyClass(Property p) {
 		if (!p.isURIResource()) {
 			return Optional.empty();
 		}
@@ -189,11 +173,11 @@ public class SpdxOwlOntology {
 		while (rangeIter.hasNext()) {
 			OntResource range = rangeIter.next();
 			if (range.isURIResource()) {
-				Class<? extends Object> retval = DATA_TYPE_TO_CLASS.get(range.getURI());
+				Class<?> retval = DATA_TYPE_TO_CLASS.get(range.getURI());
 				if (Objects.nonNull(retval)) {
 					return Optional.of(retval);
 				} else {
-					logger.warn("Unknown data type: "+range.toString());
+                    logger.warn("Unknown data type: {}", range);
 				}
 			}
 		}
@@ -208,7 +192,7 @@ public class SpdxOwlOntology {
 	 * @param classUri URI for the class
 	 * @param propertyUri URI for the property
 	 * @return any class restrictions for the values of the property in the class
-	 * @throws SpdxRdfException
+	 * @throws SpdxRdfException on RDF related errors
 	 */
 	public List<String> getClassUriRestrictions(String classUri, String propertyUri) throws SpdxRdfException {
 		Objects.requireNonNull(classUri, "Missing class URI");
@@ -218,18 +202,18 @@ public class SpdxOwlOntology {
 			if (classUri.endsWith("GenericSpdxElement")) {
 				ontClass = model.getOntClass(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_ELEMENT);
 			} else {
-				logger.warn(classUri + " is not an SPDX class");
+                logger.warn("{} is not an SPDX class", classUri);
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
 			}
 		}
 		OntProperty property = model.getOntProperty(checkGetOwlUriFromRenamed(propertyUri));
 		if (Objects.isNull(property)) {
-			logger.warn(propertyUri + " is not an SPDX property");
+            logger.warn("{} is not an SPDX property", propertyUri);
 			throw new MissingDataTypeAndClassRestriction(propertyUri + " is not an SPDX property");
 		}
-		List<Statement> propertyRestrictions = new ArrayList<Statement>();
+		List<Statement> propertyRestrictions = new ArrayList<>();
 		addPropertyRestrictions(ontClass, property, propertyRestrictions);
-		List<String> retval = new ArrayList<String>();
+		List<String> retval = new ArrayList<>();
 		for (Statement stmt:propertyRestrictions) {
 			if (stmt.getPredicate().equals(ON_CLASS_PROPERTY) && stmt.getObject().asResource().isURIResource()) {
 				retval.add(stmt.getObject().asResource().getURI());
@@ -242,7 +226,7 @@ public class SpdxOwlOntology {
 	 * @param classUri URI for the class
 	 * @param propertyUri URI for the property
 	 * @return any data restrictions for the values of the property in the class
-	 * @throws SpdxRdfException
+	 * @throws SpdxRdfException on RDF related errors
 	 */
 	public List<String> getDataUriRestrictions(String classUri, String propertyUri) throws SpdxRdfException {
 		Objects.requireNonNull(classUri, "Missing class URI");
@@ -252,18 +236,18 @@ public class SpdxOwlOntology {
 			if (classUri.endsWith("GenericSpdxElement")) {
 				ontClass = model.getOntClass(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_ELEMENT);
 			} else {
-				logger.warn(classUri + " is not an SPDX class");
+                logger.warn("{} is not an SPDX class", classUri);
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
 			}
 		}
 		OntProperty property = model.getOntProperty(checkGetOwlUriFromRenamed(propertyUri));
 		if (Objects.isNull(property)) {
-			logger.warn(propertyUri + " is not an SPDX property");
+            logger.warn("{} is not an SPDX property", propertyUri);
 			throw new SpdxRdfException(propertyUri + " is not an SPDX property");
 		}
-		List<Statement> propertyRestrictions = new ArrayList<Statement>();
+		List<Statement> propertyRestrictions = new ArrayList<>();
 		addPropertyRestrictions(ontClass, property, propertyRestrictions);
-		List<String> retval = new ArrayList<String>();
+		List<String> retval = new ArrayList<>();
 		for (Statement stmt:propertyRestrictions) {
 			if (stmt.getPredicate().equals(ON_DATA_RANGE_PROPERTY) && stmt.getObject().asResource().isURIResource()) {
 				retval.add(stmt.getObject().asResource().getURI());
@@ -276,7 +260,7 @@ public class SpdxOwlOntology {
 	 * @param classUri URI for the class containing the property
 	 * @param propertyUri URI for the property with the (possible) cardinality restrictions
 	 * @return true if the property has a max cardinality greater than 1 or does not have a max cardinality
-	 * @throws SpdxRdfException 
+	 * @throws SpdxRdfException on RDF related errors
 	 */
 	public boolean isList(String classUri, String propertyUri) throws SpdxRdfException {
 		Objects.requireNonNull(classUri, "Missing class URI");
@@ -286,16 +270,16 @@ public class SpdxOwlOntology {
 			if (classUri.endsWith("GenericSpdxElement")) {
 				ontClass = model.getOntClass(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.CLASS_SPDX_ELEMENT);
 			} else {
-				logger.warn(classUri + " is not an SPDX class");
+                logger.warn("{} is not an SPDX class", classUri);
 				throw new SpdxRdfException(classUri + " is not an SPDX class");
 			}
 		}
 		OntProperty property = model.getOntProperty(checkGetOwlUriFromRenamed(propertyUri));
 		if (Objects.isNull(property)) {
-			logger.warn(propertyUri + " is not an SPDX property");
+            logger.warn("{} is not an SPDX property", propertyUri);
 			throw new SpdxRdfException(propertyUri + " is not an SPDX property");
 		}
-		List<Statement> propertyRestrictions = new ArrayList<Statement>();
+		List<Statement> propertyRestrictions = new ArrayList<>();
 		addPropertyRestrictions(ontClass, property, propertyRestrictions);
 		if (propertyRestrictions.isEmpty()) {
 			throw new SpdxRdfException(propertyUri + " was not found related to class "+classUri);
@@ -326,7 +310,7 @@ public class SpdxOwlOntology {
 	 * Adds restriction statement to the propertyRestrictions list
 	 * @param ontClass class related to the property - all superclasses will be searched
 	 * @param property property on which the restriction occurs
-	 * @param propertyRestrictions list of all statements containing a restriction on the property within the class and all superclasses (including transitivie superclasses)
+	 * @param propertyRestrictions list of all statements containing a restriction on the property within the class and all superclasses (including transitive superclasses)
 	 */
 	private void addPropertyRestrictions(OntClass ontClass, OntProperty property, List<Statement> propertyRestrictions) {	
 		if (ontClass.isRestriction()) {
@@ -335,13 +319,9 @@ public class SpdxOwlOntology {
 				ontClass.listProperties().forEachRemaining(propertyRestrictions::add);
 			}
 		} else if (ontClass.isUnionClass()) {
-			ontClass.asUnionClass().listOperands().forEachRemaining((OntClass operand) -> {
-				 addPropertyRestrictions(operand, property, propertyRestrictions);
-			 });
+			ontClass.asUnionClass().listOperands().forEachRemaining((OntClass operand) -> addPropertyRestrictions(operand, property, propertyRestrictions));
 		} else {
-			 ontClass.listSuperClasses().forEachRemaining((OntClass superClass) -> {
-				 addPropertyRestrictions(superClass, property, propertyRestrictions);
-			 });
+			 ontClass.listSuperClasses().forEachRemaining((OntClass superClass) -> addPropertyRestrictions(superClass, property, propertyRestrictions));
 		}
 	}
 
