@@ -1,14 +1,14 @@
 /**
  * Copyright (c) 2020 Source Auditor Inc.
- *
+ * <p>
  * SPDX-License-Identifier: Apache-2.0
- * 
+ * <p>
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *
+ * <p>
  *       http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,9 +18,6 @@
 
 package org.spdx.spdxRdfStore;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -39,28 +36,21 @@ public class SpdxResourceFactory {
 	static final Logger logger = LoggerFactory.getLogger(SpdxResourceFactory.class.getName());
 	
 	// RDF_NAMESPACE
-	public static final Set<String> RDF_PROPERTIES = Collections.unmodifiableSet(
-			new HashSet<String>(Arrays.asList(SpdxConstantsCompatV2.RDF_PROPERTIES)));
+	public static final Set<String> RDF_PROPERTIES = Set.of(SpdxConstantsCompatV2.RDF_PROPERTIES);
 	
 	// RDFS_NAMESPACE
-	public static final Set<String> RDFS_PROPERTIES = Collections.unmodifiableSet(
-			new HashSet<String>(Arrays.asList(SpdxConstantsCompatV2.RDFS_PROPERTIES)));
+	public static final Set<String> RDFS_PROPERTIES = Set.of(SpdxConstantsCompatV2.RDFS_PROPERTIES);
 	
 	// DOAP_NAMESPACE
-	public static final Set<String> DOAP_TYPES = Collections.unmodifiableSet(
-			new HashSet<String>(Arrays.asList(SpdxConstantsCompatV2.DOAP_CLASSES)));
-	public static final Set<String> DOAP_PROPERTIES = Collections.unmodifiableSet(
-			new HashSet<String>(Arrays.asList(SpdxConstantsCompatV2.DOAP_PROPERTIES)));
+	public static final Set<String> DOAP_TYPES = Set.of(SpdxConstantsCompatV2.DOAP_CLASSES);
+	public static final Set<String> DOAP_PROPERTIES = Set.of(SpdxConstantsCompatV2.DOAP_PROPERTIES);
 	
 	// OWL_NAMESPACE
-	public static final Set<String> OWL_PROPERTIES = Collections.unmodifiableSet(
-			new HashSet<String>(Arrays.asList(SpdxConstantsCompatV2.OWL_PROPERTIES)));
+	public static final Set<String> OWL_PROPERTIES = Set.of(SpdxConstantsCompatV2.OWL_PROPERTIES);
 	
 	// RDF_POINTER_NAMESPACE
-	public static final Set<String> POINTER_TYPES = Collections.unmodifiableSet(
-			new HashSet<String>(Arrays.asList(SpdxConstantsCompatV2.POINTER_CLASSES)));
-	public static final Set<String> POINTER_PROPERTIES = Collections.unmodifiableSet(
-			new HashSet<String>(Arrays.asList(SpdxConstantsCompatV2.POINTER_PROPERTIES)));
+	public static final Set<String> POINTER_TYPES = Set.of(SpdxConstantsCompatV2.POINTER_CLASSES);
+	public static final Set<String> POINTER_PROPERTIES = Set.of(SpdxConstantsCompatV2.POINTER_PROPERTIES);
 	
 	/**
 	 * Create a Resource based on an SPDX class or type
@@ -79,7 +69,6 @@ public class SpdxResourceFactory {
 	}
 	
 	/**
-	 * @param className
 	 * @return URI for the type or className
 	 */
 	public static String classNameToUri(String className) {
@@ -137,7 +126,7 @@ public class SpdxResourceFactory {
 		if (typeUri.startsWith(SpdxConstantsCompatV2.SPDX_NAMESPACE)) {
 			return Optional.of(typeUri.substring(SpdxConstantsCompatV2.SPDX_NAMESPACE.length()));
 		} else {
-			logger.warn("Unknown resource type: "+typeUri);
+            logger.warn("Unknown resource type: {}", typeUri);
 			return Optional.empty();
 		}
 	}

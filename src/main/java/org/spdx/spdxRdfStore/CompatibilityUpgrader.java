@@ -1,14 +1,14 @@
 /**
  * Copyright (c) 2020 Source Auditor Inc.
- *
+ * <p>
  * SPDX-License-Identifier: Apache-2.0
- * 
+ * <p>
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *
+ * <p>
  *       http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,8 +18,6 @@
 package org.spdx.spdxRdfStore;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -58,20 +56,17 @@ public class CompatibilityUpgrader {
 	static final Logger logger = LoggerFactory.getLogger(CompatibilityUpgrader.class);
 	
 	static {
-		Map<String, Map<String, String>> mutableTypePropertyMap = new HashMap<>();
-		Map<String, String> documentMap = new HashMap<>();
-		//TODO: In 3.0, uncomment those below to change the spec versions
-//		documentMap.put(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_SPDX_VERSION.getName(), 
-//				SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_SPDX_SPEC_VERSION.getName());
-		mutableTypePropertyMap.put(SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, Collections.unmodifiableMap(documentMap));
-		
-		TYPE_PROPERTY_MAP = Collections.unmodifiableMap(mutableTypePropertyMap);
+        TYPE_PROPERTY_MAP = Map.of(SpdxConstantsCompatV2.CLASS_SPDX_DOCUMENT, Map.of(
+				// TODO: In 3.0, uncomment those below to change the spec versions
+				SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_SPDX_VERSION.getName(),
+				SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_SPDX_SPEC_VERSION.getName())
+		);
 	}
 
 	/**
 	 * Upgrade the properties in the model to the current version of the spec
-	 * @param model
-	 * @param documentNamespace
+	 * @param model RDF model
+	 * @param documentNamespace Namespace or URI for the SPDX document
 	 */
 	public static void upgrade(Model model, String documentNamespace) throws InvalidSPDXAnalysisException {
 		model.enterCriticalSection(false);
@@ -94,7 +89,8 @@ public class CompatibilityUpgrader {
 	                                RDFNode object = iter.next();
 	                                subject.addProperty(compatibleProperty, object);
 	                            }
-	                            subject.removeAll(incompatibleProperty);
+								// We'll leave the old property for compatibility
+								//  subject.removeAll(incompatibleProperty);
 	                        }
 	                    }
 	                }
@@ -103,7 +99,7 @@ public class CompatibilityUpgrader {
 			upgradeArtifactOf(model, documentNamespace);
 			upgradeReviewers(model, documentNamespace);
 			upgradeExternalDocumentRefs(model, documentNamespace);
-			upgradeHasFiles(model, documentNamespace);
+			upgradeHasFiles(model);
 		} finally {
 			model.leaveCriticalSection();
 		}
@@ -111,10 +107,9 @@ public class CompatibilityUpgrader {
 
 	/**
 	 * Changes all hasFile properties to CONTAINS relationships
-	 * @param model
-	 * @param documentNamespace
+	 * @param model RDF model
 	 */
-	private static void upgradeHasFiles(Model model, String documentNamespace) {
+	private static void upgradeHasFiles(Model model) {
 		List<Statement> statementsToRemove = new ArrayList<>();
 		Property hasFileProperty = model.createProperty("http://spdx.org/rdf/terms#hasFile");
 		Property relationshipProperty = model.createProperty(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_RELATIONSHIP.getName());
@@ -138,7 +133,7 @@ public class CompatibilityUpgrader {
 	            		foundContainsRelationships.add(stmt);
             		}
 	            });
-	            if (foundContainsRelationships.size() == 0) {
+	            if (foundContainsRelationships.isEmpty()) {
 	            	Resource relationship = createRelationship(model, file, RelationshipType.CONTAINS);
 	            	pkg.addProperty(relationshipProperty, relationship);
 	            }
@@ -149,9 +144,9 @@ public class CompatibilityUpgrader {
 
 	/**
 	 * Make sure all external document Ref's have a URI with proper ID rather than using the externalDocumentId property
-	 * @param model
-	 * @param documentNamespace
-	 * @throws InvalidSPDXAnalysisException 
+	 * @param model RDF model
+	 * @param documentNamespace Namespace or URI for the SPDX document
+	 * @throws InvalidSPDXAnalysisException on SPDX parsing errors
 	 */
 	private static void upgradeExternalDocumentRefs(Model model, String documentNamespace) throws InvalidSPDXAnalysisException {
 		String query = "SELECT ?s ?o  WHERE { ?s  <http://spdx.org/rdf/terms#externalDocumentId> ?o }";
@@ -197,9 +192,9 @@ public class CompatibilityUpgrader {
 
 	/**
 	 * Upgrade the reviewers field to Annotations with a type reviewer
-	 * @param model
-	 * @param documentNamespace
-	 * @throws InvalidSPDXAnalysisException 
+	 * @param model RDF model
+	 * @param documentNamespace Namespace or URI for the SPDX document
+	 * @throws InvalidSPDXAnalysisException on SPDX parsing errors
 	 */
 	private static void upgradeReviewers(Model model, String documentNamespace) throws InvalidSPDXAnalysisException {
 		Resource document = model.createResource(documentNamespace  + "#" + SpdxConstantsCompatV2.SPDX_DOCUMENT_ID);
@@ -267,13 +262,13 @@ public class CompatibilityUpgrader {
 
 	/**
 	 * Convert all artifactOf properties to relationships and remove the old properties and DOAP classes
-	 * @param model
+	 * @param model RDF model
 	 * @param documentNamespace the document Namespace
-	 * @throws InvalidSPDXAnalysisException 
+	 * @throws InvalidSPDXAnalysisException on SPDX parsing errors
 	 */
 	private static void upgradeArtifactOf(Model model, String documentNamespace) throws InvalidSPDXAnalysisException {
 		String docNamespace = documentNamespace + "#";
-		Set<String> addedDoapProjects = new HashSet<String>();	// prevent duplicates
+		Set<String> addedDoapProjects = new HashSet<>();	// prevent duplicates
 		List<Statement> statementsToRemove = new ArrayList<>();
 		Property artifactOfProperty = model.createProperty("http://spdx.org/rdf/terms#artifactOf");
 		Property relationshipProperty = model.createProperty(SpdxConstantsCompatV2.SPDX_NAMESPACE + SpdxConstantsCompatV2.PROP_RELATIONSHIP.getName());
@@ -291,7 +286,7 @@ public class CompatibilityUpgrader {
 	            while (iter.hasNext()) {
 	                statementsToRemove.add(iter.next());
 	            }
-	            Resource pkg = convertDoapProjectToSpdxPackage(model, doapProject, docNamespace + idPrefix + Integer.toString(nextSpdxIdNum));
+	            Resource pkg = convertDoapProjectToSpdxPackage(model, doapProject, docNamespace + idPrefix + nextSpdxIdNum);
 	            if (pkg.isURIResource() && !addedDoapProjects.contains(pkg.getURI())) {
 	                addedDoapProjects.add(pkg.getURI());
 	                nextSpdxIdNum = getNexId(model, docNamespace, idPrefix, nextSpdxIdNum);
@@ -305,10 +300,10 @@ public class CompatibilityUpgrader {
 
 	/**
 	 * Creates an anonymous relationship resource
-	 * @param model
-	 * @param pkg
-	 * @param relationshipType
-	 * @return
+	 * @param model RDF model
+	 * @param relatedElement related element
+	 * @param relationshipType SPDX relationship type
+	 * @return resource for the relationship
 	 */
 	private static Resource createRelationship(Model model, Resource relatedElement, RelationshipType relationshipType) {
 		Resource retval = model.createResource();
@@ -321,28 +316,28 @@ public class CompatibilityUpgrader {
 	}
 
 	/**
-	 * @param model
-	 * @param docNamespace
-	 * @param idPrefix
+	 * @param model RDF model
+	 * @param docNamespace Namespace or URI for the SPDX document
+	 * @param idPrefix prefix for the ID to be used
 	 * @param startingNum Starting number to search for the next available ID
 	 * @return the next ID number available
 	 */
 	private static int getNexId(Model model, String docNamespace, String idPrefix, int startingNum) {
 		int retval = startingNum;
-		Resource idResource = model.getResource(docNamespace + idPrefix + Integer.toString(retval));
+		Resource idResource = model.getResource(docNamespace + idPrefix + retval);
 		while (model.containsResource(idResource)) {
 			retval++;
-			idResource = model.getResource(docNamespace + idPrefix + Integer.toString(retval));
+			idResource = model.getResource(docNamespace + idPrefix + retval);
 		}
 		return retval;
 	}
 
 	/**
 	 * Convert a DOAP project resource into a package resource
-	 * @param model
-	 * @param doapProject
-	 * @return
-	 * @throws InvalidSPDXAnalysisException 
+	 * @param model RDF model
+	 * @param doapProject DOAP project to convert
+	 * @return a related package representing the DOAP project
+	 * @throws InvalidSPDXAnalysisException on SPDX parsing errors
 	 */
 	private static Resource convertDoapProjectToSpdxPackage(Model model, Resource doapProject, String packageUri) throws InvalidSPDXAnalysisException {
 		String packageName;
@@ -354,7 +349,7 @@ public class CompatibilityUpgrader {
 		if (Objects.isNull(packageName)) {
 			throw new InvalidSPDXAnalysisException("Missing required DOAP project name");
 		}
-		String homePage = null;
+		String homePage;
 		Property homePageProperty = model.createProperty(SpdxConstantsCompatV2.DOAP_NAMESPACE + SpdxConstantsCompatV2.PROP_PROJECT_HOMEPAGE.getName());
 		try {
 			homePage = doapProject.getProperty(homePageProperty).getString();

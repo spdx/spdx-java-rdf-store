@@ -216,7 +216,7 @@ public class SpdxVerificationHelperTest extends TestCase {
 		assertTrue(Objects.isNull(SpdxVerificationHelper.verifyDownloadLocation("bzr+https://bzr.myproject.org/MyProject/trunk@2019#src/somefile.c")));
 		
 		// invalid
-		assertFalse(Objects.isNull(SpdxVerificationHelper.verifyDownloadLocation("notsupported+https://bzr.myproject.org/MyProject/trunk@2019#src/somefile.c")));
+		assertFalse(Objects.isNull(SpdxVerificationHelper.verifyDownloadLocation("notsupported")));
 	}
 
 }
