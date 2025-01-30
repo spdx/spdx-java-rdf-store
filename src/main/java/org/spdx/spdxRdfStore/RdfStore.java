@@ -100,7 +100,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	}
 	
 	/**
-	 * Create an RDF store and initialize it with an data deserialized from stream using the documentUri
+	 * Create an RDF store and initialize it with a data deserialized from stream using the documentUri
 	 * for ID prefixes
 	 * @param stream stream of an RDF model
 	 * @throws IOException on IO error
@@ -222,7 +222,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 			id = CompatibleModelStoreWrapper.objectUriToId(false, objectUri, documentUri);
 		} catch (InvalidSPDXAnalysisException e) {
             logger.warn("Error converting object URI to ID for URI: {}", objectUri, e);
-			return IdType.Unkown;
+			return IdType.Unknown;
 		}
 		if (SpdxConstantsCompatV2.LICENSE_ID_PATTERN.matcher(id).matches()) {
 			return IdType.LicenseRef;
@@ -233,7 +233,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 		if (SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PATTERN.matcher(id).matches()) {
 			return IdType.SpdxId;
 		}
-		return IdType.Unkown;
+		return IdType.Unknown;
 	}
 
 	/* (non-Javadoc)
@@ -645,7 +645,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
     }
 
 	@Override
-	public Optional<String> getCaseSensisitiveId(String documentUri, String caseInsensisitiveId) {
+	public Optional<String> getCaseSensitiveId(String documentUri, String caseInsensisitiveId) {
 		if (Objects.isNull(modelManager)) {
 			return Optional.empty();
 		}
