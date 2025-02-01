@@ -105,7 +105,7 @@ public class RdfSpdxModelManager implements IModelStoreLock {
 	
 	public class RdfListIterator implements Iterator<Object> {
 		
-		NodeIterator listIterator;
+		final NodeIterator listIterator;
 		private final Property property;
 
 		public RdfListIterator(Resource idResource, Property property) {
@@ -171,7 +171,7 @@ public class RdfSpdxModelManager implements IModelStoreLock {
 	private final NextIdListener nextIdListener = new NextIdListener();
 	
 	private final String documentUri;
-	protected Model model;
+	final protected Model model;
 	/**
 	 * Map of a lower case ID to the case-sensitive ID
 	 */

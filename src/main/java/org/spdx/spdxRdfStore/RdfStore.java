@@ -65,11 +65,11 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	static final Logger logger = LoggerFactory.getLogger(RdfStore.class.getName());
 	
 	static final String GENERATED = "gnrtd";
-	static Pattern DOCUMENT_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM+GENERATED+"(\\d+)$");
-	static Pattern SPDX_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM+GENERATED+"(\\d+)$");
-	static Pattern LICENSE_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstantsCompatV2.NON_STD_LICENSE_ID_PRENUM+GENERATED+"(\\d+)$");
+	static final Pattern DOCUMENT_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstantsCompatV2.EXTERNAL_DOC_REF_PRENUM+GENERATED+"(\\d+)$");
+	static final Pattern SPDX_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstantsCompatV2.SPDX_ELEMENT_REF_PRENUM+GENERATED+"(\\d+)$");
+	static final Pattern LICENSE_ID_PATTERN_GENERATED = Pattern.compile(SpdxConstantsCompatV2.NON_STD_LICENSE_ID_PRENUM+GENERATED+"(\\d+)$");
 	static final String ANON_PREFIX = "__anon__";
-	static Pattern ANON_ID_PATTERN = Pattern.compile(ANON_PREFIX+"(.+)$");
+	static final Pattern ANON_ID_PATTERN = Pattern.compile(ANON_PREFIX+"(.+)$");
 	RdfSpdxModelManager modelManager;
 	String documentUri;
 	boolean dontStoreLicenseDetails = false;
@@ -84,10 +84,9 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 * Create an RDF store and initialize it with an SPDX document deserialized from stream
 	 * Note that the stream must contain one and only one SPDX document in SPDX version 2.X format
 	 * @param stream input stream of a model
-	 * @throws IOException on IO error
 	 * @throws InvalidSPDXAnalysisException on SPDX parsing errors
 	 */
-	public RdfStore(InputStream stream) throws InvalidSPDXAnalysisException, IOException {
+	public RdfStore(InputStream stream) throws InvalidSPDXAnalysisException {
 		deSerialize(stream, false);
 	}
 	
@@ -103,10 +102,9 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	 * Create an RDF store and initialize it with a data deserialized from stream using the documentUri
 	 * for ID prefixes
 	 * @param stream stream of an RDF model
-	 * @throws IOException on IO error
 	 * @throws InvalidSPDXAnalysisException on SPDX parsing errors
 	 */
-	public RdfStore(InputStream stream, String documentUri) throws InvalidSPDXAnalysisException, IOException {
+	public RdfStore(InputStream stream, String documentUri) throws InvalidSPDXAnalysisException {
 		this.documentUri = documentUri;
 		deSerialize(stream, false, documentUri);
 	}
@@ -675,7 +673,7 @@ public class RdfStore implements IModelStore, ISerializableModelStore {
 	}
 
 	@Override
-	public void close() throws Exception {
+	public void close() {
 		if (Objects.nonNull(modelManager)) {
 			modelManager.close();
 			modelManager = null;
