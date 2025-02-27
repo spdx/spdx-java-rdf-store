@@ -71,7 +71,7 @@
 						<configuration>
 						<archive>
 							<manifestEntries>
-							<Automatic-Module-Name>org.spdx.spdxRdfStore</Automatic-Module-Name>
+								<Automatic-Module-Name>org.spdx.spdxRdfStore</Automatic-Module-Name>
 							</manifestEntries>
 						</archive>
 						</configuration>
