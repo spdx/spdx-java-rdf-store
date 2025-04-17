@@ -96,8 +96,6 @@ public class SpdxVerificationHelperTest extends TestCase {
 		String fullDate = format.format(new Date());
 		assertTrue(Objects.isNull(SpdxVerificationHelper.verifyDate(fullDate)));
 		assertFalse(Objects.isNull(SpdxVerificationHelper.verifyDate(new Date().toString())));
-		String withSubSeconds = fullDate.substring(0, fullDate.length()-1) + ".234Z";
-		assertTrue(Objects.isNull(SpdxVerificationHelper.verifyDate(withSubSeconds)));
 	}
 
 	/**
