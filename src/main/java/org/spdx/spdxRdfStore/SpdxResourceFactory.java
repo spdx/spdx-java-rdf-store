@@ -1,6 +1,6 @@
 /**
- * Copyright (c) 2020 Source Auditor Inc.
- * <p>
+ * SPDX-FileCopyrightText: Copyright (c) 2020 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
  * SPDX-License-Identifier: Apache-2.0
  * <p>
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 package org.spdx.spdxRdfStore;
 
 import java.util.Objects;
@@ -67,9 +66,13 @@ public class SpdxResourceFactory {
 			return ResourceFactory.createResource(SpdxConstantsCompatV2.SPDX_NAMESPACE + type); 
 		}
 	}
-	
+
 	/**
-	 * @return URI for the type or className
+	 * Converts a class name to its corresponding URI
+	 *
+	 * @param className the name of the class to convert to a URI
+	 * @return the URI for the type or the class name
+	 * @throws NullPointerException if the className is null
 	 */
 	public static String classNameToUri(String className) {
 		Objects.requireNonNull(className);

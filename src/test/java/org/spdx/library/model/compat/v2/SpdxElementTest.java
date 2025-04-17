@@ -1,7 +1,6 @@
-package org.spdx.library.model.compat.v2;
 /**
- * Copyright (c) 2019 Source Auditor Inc.
- *
+ * SPDX-FileCopyrightText: Copyright (c) 2019 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
  * SPDX-License-Identifier: Apache-2.0
  * 
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +15,7 @@ package org.spdx.library.model.compat.v2;
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
+package org.spdx.library.model.compat.v2;
 
 import java.text.SimpleDateFormat;
 import java.util.Collection;
@@ -43,7 +42,7 @@ import org.spdx.storage.IModelStore.IdType;
 import junit.framework.TestCase;
 
 /**
- * @author gary
+  * @author Gary O'Neall
  *
  */
 public class SpdxElementTest extends TestCase {

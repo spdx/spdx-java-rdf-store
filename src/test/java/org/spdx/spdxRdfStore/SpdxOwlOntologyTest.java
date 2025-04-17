@@ -1,5 +1,7 @@
 /**
- * 
+ * SPDX-FileCopyrightText: Copyright (c) 2020 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
+ * SPDX-License-Identifier: Apache-2.0
  */
 package org.spdx.spdxRdfStore;
 
@@ -15,8 +17,7 @@ import org.spdx.library.model.v2.SpdxConstantsCompatV2;
 import junit.framework.TestCase;
 
 /**
- * @author gary
- *
+ * @author Gary O'Neall
  */
 public class SpdxOwlOntologyTest extends TestCase {
 
