@@ -1,6 +1,7 @@
 /**
+ * SPDX-FileCopyrightText: Copyright (c) 2024 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) 2024 Source Auditor Inc.
  */
 package org.spdx.library.model.compat.v2;
 
@@ -34,8 +35,7 @@ import org.spdx.spdxRdfStore.RdfStore;
 import org.spdx.storage.IModelStore;
 
 /**
- * @author gary
- *
+ * @author Gary O'Neall
  */
 public class SpdxModelInfoV2_XTest {
 	

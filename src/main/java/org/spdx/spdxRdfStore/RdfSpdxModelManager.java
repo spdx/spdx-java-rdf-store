@@ -1,6 +1,6 @@
 /**
- * Copyright (c) 2020 Source Auditor Inc.
- * <p>
+ * SPDX-FileCopyrightText: Copyright (c) 2020 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
  * SPDX-License-Identifier: Apache-2.0
  * <p>
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -85,7 +85,6 @@ import org.spdx.storage.IModelStore.IModelStoreLock;
  * If a URI type, the ID namespace is either the listed license namespace or the document URI.
  * 
  * @author Gary O'Neall
- *
  */
 @SuppressWarnings("LoggingSimilarMessage")
 public class RdfSpdxModelManager implements IModelStoreLock {
@@ -102,12 +101,22 @@ public class RdfSpdxModelManager implements IModelStoreLock {
      * subset of the listed license namespace to be used for matching
      */
     private static final CharSequence SPDX_LISTED_LICENSE_SUBPREFIX = "://spdx.org/licenses/";
-	
+
+	/**
+	 * An iterator for traversing RDF list objects associated with a specific property of a resource
+	 */
 	public class RdfListIterator implements Iterator<Object> {
-		
+
 		final NodeIterator listIterator;
 		private final Property property;
 
+		/**
+		 * Constructs an RdfListIterator for a given resource and property
+		 *
+		 * @param idResource the resource whose property values are to be iterated
+		 * @param property the property whose values are to be iterated
+		 * @throws NullPointerException if idResource or property is null
+		 */
 		public RdfListIterator(Resource idResource, Property property) {
 			Objects.requireNonNull(idResource, "ID resource can not be null");
 			Objects.requireNonNull(property, "Property resource can not be null");

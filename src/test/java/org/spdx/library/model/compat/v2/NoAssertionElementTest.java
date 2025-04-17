@@ -1,7 +1,6 @@
-package org.spdx.library.model.compat.v2;
 /**
- * Copyright (c) 2020 Source Auditor Inc.
- *
+ * SPDX-FileCopyrightText: Copyright (c) 2020 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
  * SPDX-License-Identifier: Apache-2.0
  * 
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +15,7 @@ package org.spdx.library.model.compat.v2;
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+package org.spdx.library.model.compat.v2;
 
 import org.spdx.core.DefaultModelStore;
 import org.spdx.core.InvalidSPDXAnalysisException;
@@ -33,8 +33,7 @@ import org.spdx.storage.IModelStore;
 import junit.framework.TestCase;
 
 /**
- * @author gary
- *
+ * @author Gary O'Neall
  */
 public class NoAssertionElementTest extends TestCase {
 

@@ -1,6 +1,6 @@
 /**
- * Copyright (c) 2020 Source Auditor Inc.
- * <p>
+ * SPDX-FileCopyrightText: Copyright (c) 2020 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
  * SPDX-License-Identifier: Apache-2.0
  * <p>
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,7 +57,6 @@ import org.spdx.storage.compatv2.CompatibleModelStoreWrapper;
  * Model Store implemented using RDF
  * 
  * @author Gary O'Neall
- *
  */
 @SuppressWarnings("LoggingSimilarMessage")
 public class RdfStore implements IModelStore, ISerializableModelStore {

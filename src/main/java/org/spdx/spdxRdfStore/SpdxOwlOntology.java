@@ -1,6 +1,6 @@
 /**
- * Copyright (c) 2020 Source Auditor Inc.
- * <p>
+ * SPDX-FileCopyrightText: Copyright (c) 2020 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
  * SPDX-License-Identifier: Apache-2.0
  * <p>
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,6 @@ import org.spdx.library.model.v2.SpdxConstantsCompatV2;
  * Singleton class to manage the OWL ontology
  * 
  * @author Gary O'Neall
- *
  */
 @SuppressWarnings("LoggingSimilarMessage")
 public class SpdxOwlOntology {

@@ -1,5 +1,7 @@
 /**
- * 
+ * SPDX-FileCopyrightText: Copyright (c) 2020 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
+ * SPDX-License-Identifier: Apache-2.0
  */
 package org.spdx.spdxRdfStore;
 
@@ -39,8 +41,7 @@ import org.spdx.storage.compatv2.CompatibleModelStoreWrapper;
 import junit.framework.TestCase;
 
 /**
- * @author gary
- *
+ * @author Gary O'Neall
  */
 public class RdfStoreTest extends TestCase {
 

@@ -1,7 +1,7 @@
 package org.spdx.library.model.compat.v2;
 /**
- * Copyright (c) 2019 Source Auditor Inc.
- *
+ * SPDX-FileCopyrightText: Copyright (c) 2019 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
  * SPDX-License-Identifier: Apache-2.0
  * 
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,8 +60,7 @@ import org.spdx.storage.compatv2.CompatibleModelStoreWrapper;
 import junit.framework.TestCase;
 
 /**
- * @author gary
- *
+ * @author Gary O'Neall
  */
 public class SpdxDocumentTest extends TestCase {
 	

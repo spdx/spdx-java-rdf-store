@@ -1,7 +1,6 @@
 /**
- * Copyright (c) 2020 Source Auditor Inc.
- *
- * <p>
+ * SPDX-FileCopyrightText: Copyright (c) 2020 Source Auditor Inc.
+ * SPDX-FileType: SOURCE
  * SPDX-License-Identifier: Apache-2.0
  * <p>
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +21,6 @@ package org.spdx.spdxRdfStore;
  * Exceptions related to missing restrictions in the SPDX OWL ontology
  * 
  * @author Gary O'Neall
- *
  */
 public class MissingDataTypeAndClassRestriction extends SpdxRdfException {
 
