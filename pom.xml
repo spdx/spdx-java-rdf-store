@@ -63,7 +63,19 @@
 				          </goals>
 				        </execution>
 				      </executions>
-				    </plugin>	 
+				    </plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-jar-plugin</artifactId>
+						<version>3.4.2</version>
+						<configuration>
+						<archive>
+							<manifestEntries>
+								<Automatic-Module-Name>org.spdx.spdxrdfstore</Automatic-Module-Name>
+							</manifestEntries>
+						</archive>
+						</configuration>
+					</plugin>
 					<plugin>
 		      			<groupId>org.apache.maven.plugins</groupId>
 		      			<artifactId>maven-gpg-plugin</artifactId>
