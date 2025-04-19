@@ -4,6 +4,7 @@ This Java library implements an RDF store supported [SPDX spec version 2.3][spdx
 
 The API documentation is available at:
 <https://spdx.github.io/spdx-java-rdf-store/>
+
 [spdx2.3]: https://spdx.github.io/spdx-spec/v2.3/
 [storage]: https://github.com/spdx/Spdx-Java-Library#storage-interface
 
