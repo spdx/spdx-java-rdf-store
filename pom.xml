@@ -3,7 +3,7 @@
 
   <groupId>org.spdx</groupId>
   <artifactId>spdx-rdf-store</artifactId>
-  <version>2.0.0-RC3-SNAPSHOT</version>
+  <version>2.0.0</version>
   <packaging>jar</packaging>
 
   <name>spdx-rdf-store</name>
@@ -276,7 +276,7 @@
     	<url>https://github.com/spdx/spdx-java-rdf-store</url>
     	<connection>scm:git:ssh://git@github.com:spdx/spdx-java-rdf-store</connection>
     	<developerConnection>scm:git:git@github.com:spdx/spdx-java-rdf-store</developerConnection>
-    	<tag>master</tag>
+    	<tag>v2.0.0</tag>
     </scm>
     <issueManagement>
     	<system>Github</system>
