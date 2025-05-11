@@ -1,9 +1,8 @@
 # Spdx-Java-Rdf-Store
 
+[![javadoc](https://javadoc.io/badge2/org.spdx/spdx-rdf-store/javadoc.svg)](https://javadoc.io/doc/org.spdx/spdx-rdf-store)
+ 
 This Java library implements an RDF store supported [SPDX spec version 2.3][spdx2.3] and earlier implementing the [SPDX Java Library Storage Interface][storage] using an underlying RDF store.
-
-The API documentation is available at:
-<https://spdx.github.io/spdx-java-rdf-store/>
 
 [spdx2.3]: https://spdx.github.io/spdx-spec/v2.3/
 [storage]: https://github.com/spdx/Spdx-Java-Library#storage-interface
@@ -37,6 +36,11 @@ A convenience method `public String loadModelFromFile(String fileNameOrUrl, bool
 
 [ISerializableModelStore]: https://spdx.github.io/spdx-java-core/org/spdx/storage/ISerializableModelStore.html
 
+## API Documentation
+
+- [Released API documentation](https://www.javadoc.io/doc/org.spdx/spdx-rdf-store) (as released on Maven Central)
+- [Development API documentation](https://spdx.github.io/spdx-java-rdf-store/) (updated with each GitHub change)
+
 ## Development Status
 
-Less stable - it has just been updated to support the redesigned storage interfaces.
+Reasonably stable.
