@@ -222,7 +222,7 @@
 			<plugin>
 				<groupId>org.spdx</groupId>
 					<artifactId>spdx-maven-plugin</artifactId>
-					<version>1.0.0</version>
+					<version>1.0.2</version>
 					<executions>
 						<execution>
 							<id>build-spdx</id>
@@ -279,11 +279,11 @@
     	<tag>master</tag>
     </scm>
     <issueManagement>
-    	<system>Github</system>
+    	<system>GitHub</system>
     	<url>https://github.com/spdx/spdx-java-rdf-store/issues</url>
     </issueManagement>
     <ciManagement>
-    	<system>Github Actions</system>
+    	<system>GitHub Actions</system>
     	<url>https://github.com/spdx/spdx-java-rdf-store/actions</url>
     </ciManagement>
 </project>
