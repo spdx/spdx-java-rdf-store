@@ -16,7 +16,7 @@
 	<sonar.projectKey>spdx-rdf-store</sonar.projectKey>
 	<dependency-check-maven.version>12.2.0</dependency-check-maven.version>
 	<javadoc.opts>-Xdoclint:none</javadoc.opts>
-	  <jena.version>5.6.0</jena.version>
+	  <jena.version>6.0.0</jena.version>
   </properties>
     <licenses>
 		<license>
