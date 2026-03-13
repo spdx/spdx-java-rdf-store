@@ -1,7 +1,8 @@
-# Spdx-Java-Rdf-Store
+# SPDX Java RDF Store
 
+[![Maven Central](https://img.shields.io/maven-central/v/org.spdx/spdx-rdf-store)](https://central.sonatype.com/artifact/org.spdx/spdx-rdf-store)
 [![javadoc](https://javadoc.io/badge2/org.spdx/spdx-rdf-store/javadoc.svg)](https://javadoc.io/doc/org.spdx/spdx-rdf-store)
- 
+
 This Java library implements an RDF store supported [SPDX spec version 2.3][spdx2.3] and earlier implementing the [SPDX Java Library Storage Interface][storage] using an underlying RDF store.
 
 [spdx2.3]: https://spdx.github.io/spdx-spec/v2.3/
